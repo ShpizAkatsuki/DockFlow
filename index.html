@@ -1588,8 +1588,16 @@
         function syncError(e) {
             console.error('שגיאת סנכרון', e);
             setStatus('שגיאת סנכרון - לחץ לנסות שוב', 'err');
-            const msg = e && e.code === 'permission-denied' ? 'אין הרשאה ב-Firestore. בדוק שה-Rules מעודכנים ופורסמו.' : 'הסנכרון נכשל. הנתונים נשמרו במכשיר.';
-            toast(msg);
+            const code = (e && (e.code || e.message)) || 'unknown';
+            const hints = {
+                'permission-denied': 'אין הרשאה ב-Firestore. בדוק שה-Rules מעודכנים ופורסמו (עם /{document=**}).',
+                'unavailable': 'אין חיבור ל-Firestore. בדוק אינטרנט, חוסם פרסומות או סינון רשת.',
+                'failed-precondition': 'מסד Firestore לא נוצר או לא מוכן. בדוק ב-Firebase ← Firestore Database.',
+                'not-found': 'מסד Firestore לא נמצא. בדוק שנוצר מסד (default) ב-Firebase.',
+                'resource-exhausted': 'חרגת ממכסת Firestore החינמית.',
+                'invalid-argument': 'הנתונים גדולים מדי לשמירה בענן (מעל 1MB).'
+            };
+            toast((hints[String(code).replace('firestore/', '')] || 'הסנכרון נכשל. הנתונים נשמרו במכשיר.') + ' [' + code + ']');
         }
 
         async function initialSync() {

@@ -1,6 +1,6 @@
 // DocFlow service worker - מטמון למעטפת האפליקציה (עובד גם בלי רשת)
 // בכל עדכון של index.html אפשר להעלות את המספר כדי לרענן את המטמון
-const CACHE = 'docflow-v1';
+const CACHE = 'docflow-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const CDN = ['cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
 
