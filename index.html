@@ -110,6 +110,12 @@
                     <button onclick="openAddCategoryModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
                         <i class="fa-solid fa-folder-plus w-5 text-center text-apple-blue"></i> הוסף קטגוריה חדשה
                     </button>
+                    <button onclick="openReorderModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                        <i class="fa-solid fa-sort w-5 text-center text-apple-blue"></i> סדר קטגוריות
+                    </button>
+                    <button onclick="openTagsModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                        <i class="fa-solid fa-tags w-5 text-center text-apple-blue"></i> ניהול תגיות
+                    </button>
                 </nav>
             </div>
             <div>
@@ -127,7 +133,7 @@
             </button>
         </div>
 
-        <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
+                <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
             <button onclick="toggleDarkMode()" class="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white dark:hover:bg-apple-darkCard transition text-xs font-medium">
                 <i id="dark-mode-icon" class="fa-solid fa-moon text-base"></i><span id="dark-mode-label">מצב כהה</span>
             </button>
@@ -271,6 +277,10 @@
                     <label class="lbl" for="folder-name-input">שם התיקיה</label>
                     <input type="text" id="folder-name-input" required maxlength="60" placeholder="לדוגמה: חשבוניות 2026" class="inp">
                 </div>
+                <div>
+                    <label class="lbl" for="folder-parent-select">מיקום התיקיה</label>
+                    <select id="folder-parent-select" class="inp"></select>
+                </div>
                 <div class="flex items-center justify-end gap-3 pt-4 border-t border-apple-border/40 dark:border-apple-darkBorder">
                     <button type="button" onclick="closeFolderModal()" class="btn-ghost">ביטול</button>
                     <button type="submit" class="btn-primary">שמור תיקיה</button>
@@ -288,7 +298,7 @@
             </div>
             <form id="doc-form" onsubmit="handleDocSubmit(event)" class="p-6 space-y-4 overflow-y-auto">
                 <input type="hidden" id="doc-edit-id">
-                <div>
+                <div id="doc-title-wrap">
                     <label class="lbl" for="doc-title-input">שם המסמך</label>
                     <input type="text" id="doc-title-input" required maxlength="120" placeholder="לדוגמה: חשבונית ינואר" class="inp">
                 </div>
@@ -321,13 +331,20 @@
                     <span class="lbl">קובץ מצורף</span>
                     <div id="drop-zone" onclick="document.getElementById('doc-file-input').click()" class="border-2 border-dashed border-apple-border dark:border-apple-darkBorder rounded-2xl p-4 text-center cursor-pointer hover:border-apple-blue transition bg-apple-lightGray/30 dark:bg-apple-darkBorder/20">
                         <i class="fa-solid fa-cloud-arrow-up text-2xl text-apple-blue mb-1"></i>
-                        <p id="drop-zone-text" class="text-xs text-apple-gray font-medium">גרור קובץ לכאן או לחץ לבחירה (PDF, Word, Excel, תמונה)</p>
+                        <p id="drop-zone-text" class="text-xs text-apple-gray font-medium">גרור קבצים לכאן או לחץ לבחירה (אפשר לבחור כמה קבצים יחד)</p>
                         <input type="file" id="doc-file-input" onchange="handleFileSelect(this)" class="hidden">
                     </div>
                 </div>
                 <div>
-                    <label class="lbl" for="doc-tags-input">תגיות (מופרדות בפסיקים)</label>
-                    <input type="text" id="doc-tags-input" placeholder="חשבונית, ענן, כספים" class="inp">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="lbl !mb-0">תגיות</span>
+                        <button type="button" onclick="openTagsModal()" class="text-xs font-semibold text-apple-blue hover:underline">ניהול תגיות</button>
+                    </div>
+                    <div id="doc-tags-picker" class="flex flex-wrap gap-2 mb-2"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="doc-new-tag" maxlength="30" placeholder="תגית חדשה..." aria-label="תגית חדשה" onkeydown="if(event.key==='Enter'){event.preventDefault();addTagFromDocModal();}" class="inp">
+                        <button type="button" onclick="addTagFromDocModal()" class="btn-soft shrink-0">הוסף</button>
+                    </div>
                 </div>
                 <div>
                     <label class="lbl" for="doc-content-input">הערות</label>
@@ -338,6 +355,43 @@
                     <button type="submit" id="doc-submit-btn" class="btn-primary !px-5">שמור מסמך</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Reorder categories -->
+    <div id="reorder-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden p-3" role="dialog" aria-modal="true" onmousedown="if(event.target===this)closeReorderModal()">
+        <div class="bg-white dark:bg-apple-darkCard rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden border border-apple-border/50 dark:border-apple-darkBorder">
+            <div class="px-6 py-4 border-b border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between bg-apple-lightGray/30 dark:bg-apple-darkBorder/20">
+                <h3 class="font-bold text-base">סדר קטגוריות</h3>
+                <button onclick="closeReorderModal()" class="icon-btn" aria-label="סגור"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <p class="text-xs text-apple-gray mb-4">שנה את הסדר בעזרת החצים. קטגוריות שסומנו בכוכב מופיעות תמיד ראשונות, והחצים משנים את הסדר בתוך כל קבוצה.</p>
+                <div id="reorder-list" class="space-y-2"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-apple-border/40 dark:border-apple-darkBorder flex justify-end">
+                <button onclick="closeReorderModal()" class="btn-primary">סיום</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag manager -->
+    <div id="tags-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden p-3" role="dialog" aria-modal="true" onmousedown="if(event.target===this)closeTagsModal()">
+        <div class="bg-white dark:bg-apple-darkCard rounded-2xl shadow-2xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden border border-apple-border/50 dark:border-apple-darkBorder">
+            <div class="px-6 py-4 border-b border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between bg-apple-lightGray/30 dark:bg-apple-darkBorder/20">
+                <h3 class="font-bold text-base">ניהול תגיות</h3>
+                <button onclick="closeTagsModal()" class="icon-btn" aria-label="סגור"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <form onsubmit="addTagFromManager(event)" class="flex gap-2">
+                    <input type="text" id="tag-new-input" maxlength="30" placeholder="תגית חדשה..." aria-label="תגית חדשה" class="inp">
+                    <button type="submit" class="btn-primary shrink-0">הוסף</button>
+                </form>
+                <div id="tags-list" class="space-y-2"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-apple-border/40 dark:border-apple-darkBorder flex justify-end">
+                <button onclick="closeTagsModal()" class="btn-primary">סיום</button>
+            </div>
         </div>
     </div>
 
@@ -382,19 +436,7 @@
     // =====================================================================
     //  נתוני ברירת מחדל
     // =====================================================================
-    const defaultData = {
-        categories: [
-            { id: 'cat-1', name: 'כספים וחשבוניות', description: 'ניהול הכנסות, הוצאות וחשבוניות ספקים', icon: 'fa-wallet', folders: [{ id: 'fol-1-1', name: 'חשבוניות מס קבלה' }, { id: 'fol-1-2', name: 'דוחות מע״מ ורו״ח' }] },
-            { id: 'cat-2', name: 'חוזים משפטיים', description: 'הסכמי התקשרות עם לקוחות וספקים', icon: 'fa-scale-balanced', folders: [{ id: 'fol-2-1', name: 'חוזי לקוחות' }, { id: 'fol-2-2', name: 'הסכמי סודיות (NDA)' }] },
-            { id: 'cat-3', name: 'פיתוח וארכיטקטורה', description: 'מסמכי אפיון, תרשימי זרימה וקוד', icon: 'fa-code', folders: [{ id: 'fol-3-1', name: 'אפיון מערכת SaaS' }, { id: 'fol-3-2', name: 'תשתיות ענן ו-API' }] },
-            { id: 'cat-4', name: 'ניהול מוצר ודרישות', description: 'מפת דרכים, פיצ׳רים ופידבק משתמשים', icon: 'fa-lightbulb', folders: [{ id: 'fol-4-1', name: 'Roadmap 2026' }, { id: 'fol-4-2', name: 'פידבק משתמשים' }] },
-            { id: 'cat-5', name: 'אישי וכללי', description: 'מסמכים אישיים, תעודות וביטוחים', icon: 'fa-user-shield', folders: [{ id: 'fol-5-1', name: 'ביטוחים ובריאות' }, { id: 'fol-5-2', name: 'תעודות והסמכות' }] }
-        ],
-        documents: [
-            { id: 'doc-1', title: 'חשבונית שרתים ענן ינואר', categoryId: 'cat-1', folderId: 'fol-1-1', tags: ['ענן', 'חשבונית', 'הוצאות'], size: '', date: '2026-01-12', expiryDate: '2026-11-30', status: 'payment', content: 'חשבונית חודשית עבור שרתי AWS ואירוח אפליקציה.', fileName: '', fileType: 'pdf', fileKey: '', isFavorite: true, isDeleted: false, versions: [] },
-            { id: 'doc-2', title: 'הסכם עבודה מול חברת פיתוח', categoryId: 'cat-2', folderId: 'fol-2-1', tags: ['חוזה', 'לקוח', 'משפטי'], size: '', date: '2026-02-01', expiryDate: '2026-10-15', status: 'approved', content: 'חוזה התקשרות שנתי כולל תנאי תשלום ו-SLA.', fileName: '', fileType: 'word', fileKey: '', isFavorite: false, isDeleted: false, versions: [] }
-        ]
-    };
+    const defaultData = { categories: [], documents: [], tags: [] };
 
     const LS_KEY = 'docflow_saas_data';
     const ICONS = ['fa-folder','fa-wallet','fa-receipt','fa-scale-balanced','fa-file-contract','fa-code','fa-lightbulb','fa-user-shield','fa-briefcase','fa-house','fa-car','fa-heart-pulse','fa-graduation-cap','fa-plane','fa-building-columns','fa-camera','fa-chart-line','fa-handshake','fa-shield-halved','fa-box-archive'];
@@ -463,6 +505,36 @@
     const getDoc = id => appData.documents.find(d => d.id === id);
     const folderOf = (cat, doc) => cat ? cat.folders.find(f => f.id === doc.folderId) : null;
     const activeDocs = () => appData.documents.filter(d => !d.isDeleted);
+    const sortedCategories = () => [...appData.categories.filter(c => c.isFavorite), ...appData.categories.filter(c => !c.isFavorite)];
+    const folderChildren = (cat, parentId) => cat.folders.filter(f => (f.parentId || '') === (parentId || ''));
+    function descendantFolderIds(cat, folId) {
+        const out = [], seen = new Set([folId]);
+        const walk = id => cat.folders.filter(f => f.parentId === id).forEach(f => { if (seen.has(f.id)) return; seen.add(f.id); out.push(f.id); walk(f.id); });
+        walk(folId);
+        return out;
+    }
+    function folderPath(cat, folId) {
+        const names = [];
+        let cur = cat.folders.find(f => f.id === folId), guard = 0;
+        while (cur && guard++ < 50) { names.unshift(cur.name); cur = cat.folders.find(f => f.id === cur.parentId); }
+        return names.join(' › ');
+    }
+    function folderLabel(cat, doc) { return (cat && doc.folderId && folderPath(cat, doc.folderId)) || 'ללא תיקיה'; }
+    function folderOptions(cat, excludeIds = []) {
+        const out = [];
+        const walk = pid => folderChildren(cat, pid).forEach(f => {
+            if (excludeIds.includes(f.id)) return;
+            out.push({ id: f.id, label: folderPath(cat, f.id) });
+            walk(f.id);
+        });
+        walk('');
+        return out;
+    }
+    function normFolders(fs) {
+        fs = Array.isArray(fs) ? fs.filter(f => f && f.id) : [];
+        const ids = new Set(fs.map(f => f.id));
+        return fs.map(f => ({ ...f, name: f.name || 'ללא שם', parentId: (f.parentId && f.parentId !== f.id && ids.has(f.parentId)) ? f.parentId : '' }));
+    }
 
     // =====================================================================
     //  אחסון קבצים (IndexedDB) - מונע מילוי של localStorage
@@ -521,7 +593,7 @@
     function normalize(d) {
         d.categories = d.categories.map(c => ({
             id: c.id || uid('cat'), name: c.name || 'ללא שם', description: c.description || '',
-            icon: safeIcon(c.icon), folders: Array.isArray(c.folders) ? c.folders.filter(f => f && f.id) : []
+            icon: safeIcon(c.icon), isFavorite: !!c.isFavorite, folders: normFolders(c.folders)
         }));
         d.documents = d.documents.map(x => {
             const doc = {
@@ -533,6 +605,18 @@
             if (!doc.fileKey && !doc.fileUrl) { doc.fileName = ''; doc.size = ''; doc.versions = []; }
             return doc;
         });
+        // תגיות: ספריית תגיות מרכזית (איחוד עם תגיות שכבר קיימות במסמכים)
+        const lib = [];
+        const addLib = t => { t = String(t || '').trim(); if (t && !lib.some(x => x.toLowerCase() === t.toLowerCase())) lib.push(t); };
+        (Array.isArray(d.tags) ? d.tags : []).forEach(addLib);
+        d.documents.forEach(doc => {
+            doc.tags = doc.tags.map(t => String(t).trim()).filter(Boolean);
+            doc.tags.forEach(addLib);
+            doc.tags = [...new Set(doc.tags.map(t => lib.find(x => x.toLowerCase() === t.toLowerCase())))];
+            const cat = d.categories.find(c => c.id === doc.categoryId);
+            if (doc.folderId && !(cat && cat.folders.some(f => f.id === doc.folderId))) doc.folderId = '';
+        });
+        d.tags = lib;
         return d;
     }
     function loadData() {
@@ -578,7 +662,7 @@
     let docViewMode = localStorage.getItem('docflow_view') || 'list';
     let searchQuery = '';
     let searchTimer;
-    let listState = { sort: 'date-desc', status: 'all', folder: 'all' };
+    let listState = { sort: 'date-desc', status: 'all', folder: '', flat: false };
 
     // =====================================================================
     //  הודעות ואישורים
@@ -637,7 +721,7 @@
         if (e.key === 'Escape') {
             if (moveResolve) return moveResolve(null);
             if (confirmResolve) return confirmResolve(false);
-            ['doc-view-modal', 'doc-modal', 'category-modal', 'folder-modal'].forEach(id => $(id).classList.add('hidden'));
+            ['doc-view-modal', 'doc-modal', 'category-modal', 'folder-modal', 'reorder-modal', 'tags-modal'].forEach(id => $(id).classList.add('hidden'));
         } else if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
             e.preventDefault();
             const s = window.innerWidth >= 640 ? $('global-search') : $('mobile-search');
@@ -660,7 +744,7 @@
         currentView = viewId;
         activeCategoryId = catId;
         selectedDocIds = [];
-        listState = { sort: listState.sort, status: 'all', folder: 'all' };
+        listState = { sort: listState.sort, status: 'all', folder: '', flat: false };
         searchQuery = ''; $('global-search').value = ''; $('mobile-search').value = '';
         closeSidebarIfMobile();
         render();
@@ -703,11 +787,11 @@
     function renderSidebarCategories() {
         $('sidebar-categories').innerHTML = appData.categories.length === 0
             ? '<p class="text-xs text-apple-gray px-3">אין קטגוריות עדיין.</p>'
-            : appData.categories.map(cat => {
+            : sortedCategories().map(cat => {
                 const n = activeDocs().filter(d => d.categoryId === cat.id).length;
                 const on = !searchQuery && currentView === 'category' && activeCategoryId === cat.id;
                 return `<button onclick="switchView('category','${cat.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition group ${on ? 'bg-apple-blue text-white shadow-sm' : 'hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder'}">
-                    <div class="flex items-center gap-3 truncate"><i class="fa-solid ${safeIcon(cat.icon)} w-5 text-center ${on ? '' : 'text-apple-gray group-hover:text-apple-blue'}"></i><span class="truncate">${esc(cat.name)}</span></div>
+                    <div class="flex items-center gap-3 truncate"><i class="fa-solid ${safeIcon(cat.icon)} w-5 text-center ${on ? '' : 'text-apple-gray group-hover:text-apple-blue'}"></i><span class="truncate">${esc(cat.name)}</span>${cat.isFavorite ? '<i class="fa-solid fa-star text-[10px] text-amber-400"></i>' : ''}</div>
                     <span class="pill">${n}</span></button>`;
             }).join('');
     }
@@ -743,7 +827,7 @@
             <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                 <div>
                     <h2 class="text-2xl md:text-3xl font-bold">${greeting()} 👋</h2>
-                    <p class="text-white/85 text-sm mt-1">${attention.length ? `יש ${attention.length} מסמכים שפג או עומד לפוג תוקפם.` : 'כל המסמכים שלך מסודרים. אין מסמכים שעומדים לפוג.'}</p>
+                    <p class="text-white/85 text-sm mt-1">${attention.length ? `יש ${attention.length} מסמכים שפג או עומד לפוג תוקפם.` : (appData.categories.length ? 'כל המסמכים שלך מסודרים. אין מסמכים שעומדים לפוג.' : 'ברוך הבא! כדי להתחיל, צור את הקטגוריה הראשונה שלך.')}</p>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <button onclick="openAddCategoryModal()" class="bg-white text-apple-dark hover:bg-white/90 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-md transition flex items-center gap-2"><i class="fa-solid fa-folder-plus text-apple-blue"></i> קטגוריה חדשה</button>
@@ -751,6 +835,7 @@
                 </div>
             </div>
 
+            ${demoBanner()}
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 ${stat('סך הכל מסמכים', docs.length, 'fa-file-lines', 'bg-blue-50 dark:bg-blue-900/20 text-apple-blue')}
                 ${stat('קטגוריות', appData.categories.length, 'fa-folder-tree', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
@@ -773,18 +858,18 @@
             <div>
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold">קטגוריות</h3>
-                    <button onclick="openAddCategoryModal()" class="text-sm font-semibold text-apple-blue hover:underline">הוסף קטגוריה</button>
+                    <div class="flex items-center gap-4"><button onclick="openReorderModal()" class="text-sm font-semibold text-apple-gray hover:text-apple-blue hover:underline"><i class="fa-solid fa-sort ml-1"></i>סדר</button><button onclick="openAddCategoryModal()" class="text-sm font-semibold text-apple-blue hover:underline">הוסף קטגוריה</button></div>
                 </div>
-                ${appData.categories.length === 0 ? '<div class="card p-8 text-center text-sm text-apple-gray">אין קטגוריות. צור קטגוריה כדי לארגן את המסמכים.</div>' : ''}
+                ${appData.categories.length === 0 ? '<div class="card p-8 text-center"><i class="fa-regular fa-folder-open text-3xl text-apple-gray mb-3 block"></i><p class="text-sm text-apple-gray mb-4">אין קטגוריות עדיין. צור קטגוריה ראשונה כדי להתחיל לארגן מסמכים.</p><button onclick="openAddCategoryModal()" class="btn-primary">צור קטגוריה</button></div>' : ''}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    ${appData.categories.map(cat => {
+                    ${sortedCategories().map(cat => {
                         const n = docs.filter(d => d.categoryId === cat.id).length;
                         return `
                         <div onclick="switchView('category','${cat.id}')" onkeydown="if(event.key==='Enter')switchView('category','${cat.id}')" tabindex="0" role="button" class="card p-5 hover:shadow-md transition cursor-pointer flex flex-col justify-between group">
                             <div>
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="w-12 h-12 rounded-2xl bg-apple-lightGray dark:bg-apple-darkBorder flex items-center justify-center text-apple-blue text-xl group-hover:bg-apple-blue group-hover:text-white transition"><i class="fa-solid ${safeIcon(cat.icon)}"></i></div>
-                                    <span class="pill">${n} מסמכים</span>
+                                    <div class="flex items-center gap-2"><span class="pill">${n} מסמכים</span><button onclick="toggleCategoryStar('${cat.id}', event)" class="w-8 h-8 rounded-full flex items-center justify-center transition ${cat.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="סמן קטגוריה בכוכב"><i class="fa-${cat.isFavorite ? 'solid' : 'regular'} fa-star"></i></button></div>
                                 </div>
                                 <h4 class="font-bold text-base group-hover:text-apple-blue transition">${esc(cat.name)}</h4>
                                 <p class="text-xs text-apple-gray mt-1 line-clamp-2">${esc(cat.description) || '&nbsp;'}</p>
@@ -885,22 +970,41 @@
         return a;
     }
 
-    function renderCategoryDashboard(cat) {
+    function categoryViewDocs(cat) {
         const all = activeDocs().filter(d => d.categoryId === cat.id);
-        const hasFolder = d => cat.folders.some(f => f.id === d.folderId);
-        const noFolderCount = all.filter(d => !hasFolder(d)).length;
-        let docs = all.filter(d => {
-            if (listState.folder === 'none' && hasFolder(d)) return false;
-            if (listState.folder !== 'all' && listState.folder !== 'none' && d.folderId !== listState.folder) return false;
-            return listState.status === 'all' || d.status === listState.status;
-        });
-        docs = sortDocs(docs);
-        const chip = (id, label, count, extra = '') => {
-            const on = listState.folder === id;
-            return `<div class="flex items-center rounded-xl border transition ${on ? 'bg-apple-blue/10 border-apple-blue text-apple-blue' : 'bg-apple-lightGray/60 dark:bg-apple-darkBorder/40 border-apple-border/60 dark:border-apple-darkBorder'}">
-                <button onclick="setFolderFilter('${id}')" class="px-3.5 py-2 text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-folder text-amber-500"></i>${label}<span class="font-normal text-apple-gray">${count}</span></button>${extra}</div>`;
+        const cur = listState.folder;
+        const sub = cur ? [cur, ...descendantFolderIds(cat, cur)] : null;
+        let docs;
+        if (listState.flat) docs = sub ? all.filter(d => sub.includes(d.folderId)) : all;
+        else docs = all.filter(d => cur ? d.folderId === cur : !cat.folders.some(f => f.id === d.folderId));
+        return docs.filter(d => listState.status === 'all' || d.status === listState.status);
+    }
+
+    function renderCategoryDashboard(cat) {
+        if (listState.folder && !cat.folders.some(f => f.id === listState.folder)) listState.folder = '';
+        const cur = listState.folder;
+        const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
+        const docs = sortDocs(categoryViewDocs(cat));
+        const subfolders = folderChildren(cat, cur);
+        const trail = [];
+        let c = cat.folders.find(f => f.id === cur), guard = 0;
+        while (c && guard++ < 50) { trail.unshift(c); c = cat.folders.find(f => f.id === c.parentId); }
+        const sel = (v, val, l) => `<option value="${val}" ${v === val ? 'selected' : ''}>${l}</option>`;
+        const crumbs = `<button onclick="setFolderFilter('')" class="font-semibold hover:text-apple-blue ${cur ? '' : 'text-apple-blue'}">${esc(cat.name)}</button>` +
+            trail.map((f, i) => `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setFolderFilter('${f.id}')" class="font-semibold hover:text-apple-blue ${i === trail.length - 1 ? 'text-apple-blue' : ''}">${esc(f.name)}</button>`).join('');
+        const folderCard = f => {
+            const ids = [f.id, ...descendantFolderIds(cat, f.id)];
+            const n = catDocs.filter(d => ids.includes(d.folderId)).length;
+            const sc = folderChildren(cat, f.id).length;
+            return `<div onclick="setFolderFilter('${f.id}')" onkeydown="if(event.key==='Enter')setFolderFilter('${f.id}')" tabindex="0" role="button" class="card p-4 flex items-center gap-3 hover:shadow-md transition cursor-pointer">
+                <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-folder"></i></div>
+                <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(f.name)}</p><span class="text-[11px] text-apple-gray">${n} מסמכים${sc ? ` · ${sc} תיקיות משנה` : ''}</span></div>
+                <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
+                    <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תיקיה"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תיקיה"><i class="fa-solid fa-xmark text-xs"></i></button>
+                </div>
+            </div>`;
         };
-        const sel = (cur, v, l) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`;
 
         $('app-content').innerHTML = `
         <div class="space-y-5 max-w-7xl mx-auto">
@@ -908,7 +1012,11 @@
                 <div class="flex items-center gap-4 min-w-0">
                     <div class="w-14 h-14 rounded-2xl bg-apple-blue/10 text-apple-blue flex items-center justify-center text-2xl shrink-0"><i class="fa-solid ${safeIcon(cat.icon)}"></i></div>
                     <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap"><h2 class="text-xl font-bold">${esc(cat.name)}</h2><span class="pill">${all.length} מסמכים</span></div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold">${esc(cat.name)}</h2>
+                            <button onclick="toggleCategoryStar('${cat.id}', event)" class="text-lg transition ${cat.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="סמן קטגוריה בכוכב" title="${cat.isFavorite ? 'הסר מהמועדפים' : 'סמן בכוכב כדי שתופיע ראשונה'}"><i class="fa-${cat.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
+                            <span class="pill">${catDocs.length} מסמכים</span>
+                        </div>
                         <p class="text-xs text-apple-gray mt-1">${esc(cat.description)}</p>
                     </div>
                 </div>
@@ -919,15 +1027,9 @@
                 </div>
             </div>
 
-            <div class="card p-4">
-                <div class="flex flex-wrap gap-2">
-                    ${chip('all', 'הכל', all.length)}
-                    ${cat.folders.map(f => chip(f.id, esc(f.name), all.filter(d => d.folderId === f.id).length, `
-                        <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="שנה שם תיקיה"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                        <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תיקיה"><i class="fa-solid fa-xmark text-xs"></i></button>`)).join('')}
-                    ${noFolderCount ? chip('none', 'ללא תיקיה', noFolderCount) : ''}
-                </div>
-            </div>
+            <div class="flex items-center flex-wrap text-sm px-1" aria-label="מיקום נוכחי">${crumbs}</div>
+
+            ${subfolders.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
             <div class="card p-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
@@ -941,6 +1043,7 @@
                     <select onchange="listState.status=this.value;render()" class="inp !w-auto !py-2 !text-xs" aria-label="סינון לפי סטטוס">
                         ${sel(listState.status, 'all', 'כל הסטטוסים')}${Object.entries(STATUS).map(([k, v]) => sel(listState.status, k, v.label)).join('')}
                     </select>
+                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="listState.flat=this.checked;selectedDocIds=[];render()" class="rounded"> הצג גם מתיקיות משנה</label>
                 </div>
                 <div class="flex items-center gap-2 justify-between">
                     <div id="bulk-actions-toolbar" class="${selectedDocIds.length ? 'flex' : 'hidden'} items-center gap-2 bg-apple-blue/10 p-1.5 rounded-xl border border-apple-blue/20">
@@ -954,14 +1057,16 @@
             </div>
 
             ${docs.length === 0
-                ? `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${all.length ? 'אין מסמכים שמתאימים לסינון הנוכחי.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "מסמך חדש" כדי להתחיל.'}</div>`
+                ? (subfolders.length && !listState.flat
+                    ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה או ללחוץ על "מסמך חדש".</p>`
+                    : `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "מסמך חדש" כדי להתחיל.'}</div>`)
                 : docViewMode === 'list' ? renderDocsTable(docs, cat) : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${docs.map(d => renderDocGalleryCard(d, false)).join('')}</div>`}
         </div>`;
         syncSelectionUI();
     }
 
     function setDocViewMode(m) { docViewMode = m; try { localStorage.setItem('docflow_view', m); } catch (e) {} render(); }
-    function setFolderFilter(id) { listState.folder = id; selectedDocIds = []; render(); }
+    function setFolderFilter(id) { listState.folder = id; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
 
     function renderDocsTable(docs, cat) {
         const allSelected = docs.length && docs.every(d => selectedDocIds.includes(d.id));
@@ -992,9 +1097,9 @@
                                     <div class="min-w-0"><p class="font-semibold leading-tight">${esc(doc.title)}</p><span class="text-[11px] text-apple-gray">${esc(doc.fileName) || 'ללא קובץ מצורף'}</span></div>
                                 </div>
                             </td>
-                            <td class="py-3 px-4 text-xs text-apple-gray font-medium">${fol ? esc(fol.name) : 'ללא תיקיה'}</td>
+                            <td class="py-3 px-4 text-xs text-apple-gray font-medium">${esc(folderLabel(cat, doc))}</td>
                             <td class="py-3 px-4"><div class="flex flex-col items-start gap-1">${statusBadge(doc.status)}${expiryBadge(doc)}</div></td>
-                            <td class="py-3 px-4 text-xs text-apple-gray"><div>${esc(doc.size) || '—'}</div>${doc.fileName ? `<span class="uppercase text-[10px] font-bold text-apple-blue">${esc(doc.fileType)}</span>` : ''}</td>
+                            <td class="py-3 px-4 text-xs text-apple-gray"><div>${esc(doc.size) || '—'}</div>${doc.fileName ? `<span class="uppercase text-[10px] font-bold text-apple-blue">${esc(doc.fileType)}</span>` : 'גרור קובץ לכאן או לחץ לבחירה'}</td>
                             <td class="py-3 px-4 text-left" onclick="event.stopPropagation()">
                                 <div class="flex items-center justify-end gap-1">
                                     ${doc.fileKey ? `<button onclick="downloadDoc('${doc.id}')" class="icon-btn" aria-label="הורד קובץ" title="הורד"><i class="fa-solid fa-download text-xs"></i></button>` : ''}
@@ -1021,7 +1126,7 @@
             <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0"><i class="fa-solid ${getFileIcon(doc.fileType)}"></i></div>
             <div class="flex-1 min-w-0">
                 <p class="font-semibold text-sm truncate">${esc(doc.title)}</p>
-                <p class="text-[11px] text-apple-gray truncate">${opts.showCat && cat ? esc(cat.name) + ' › ' : ''}${fol ? esc(fol.name) : 'ללא תיקיה'}</p>
+                <p class="text-[11px] text-apple-gray truncate">${opts.showCat && cat ? esc(cat.name) + ' › ' : ''}${esc(folderLabel(cat, doc))}</p>
                 <div class="flex flex-wrap items-center gap-1.5 mt-1">${statusBadge(doc.status)}${expiryBadge(doc)}</div>
             </div>
             <button onclick="toggleFavorite('${doc.id}', event)" class="text-base p-2 transition ${doc.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="מועדף"><i class="fa-${doc.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
@@ -1041,7 +1146,7 @@
             <div>
                 ${preview}
                 <div class="flex items-center justify-between gap-2 text-[11px] text-apple-gray mb-1">
-                    <span class="font-medium bg-apple-lightGray dark:bg-apple-darkBorder px-2 py-0.5 rounded-md truncate">${showCat && cat ? esc(cat.name) + ' › ' : ''}${fol ? esc(fol.name) : 'ללא תיקיה'}</span>
+                    <span class="font-medium bg-apple-lightGray dark:bg-apple-darkBorder px-2 py-0.5 rounded-md truncate">${showCat && cat ? esc(cat.name) + ' › ' : ''}${esc(folderLabel(cat, doc))}</span>
                     <span class="shrink-0">${formatDate(doc.date)}</span>
                 </div>
                 <h4 class="font-bold text-base line-clamp-1">${esc(doc.title)}</h4>
@@ -1067,13 +1172,7 @@
     // =====================================================================
     function currentListDocs() {
         const cat = getCat(activeCategoryId);
-        if (!cat) return [];
-        const hasFolder = d => cat.folders.some(f => f.id === d.folderId);
-        return activeDocs().filter(d => d.categoryId === cat.id).filter(d => {
-            if (listState.folder === 'none') return !hasFolder(d);
-            if (listState.folder !== 'all') return d.folderId === listState.folder;
-            return true;
-        }).filter(d => listState.status === 'all' || d.status === listState.status);
+        return cat ? categoryViewDocs(cat) : [];
     }
     function toggleSelectDoc(id, checked) {
         selectedDocIds = checked ? [...new Set([...selectedDocIds, id])] : selectedDocIds.filter(x => x !== id);
@@ -1118,7 +1217,7 @@
         const cat = getCat(doc.categoryId), fol = folderOf(cat, doc);
         $('view-doc-badges').innerHTML = statusBadge(doc.status) + expiryBadge(doc);
         $('view-doc-name').textContent = doc.title;
-        $('view-doc-category-folder').textContent = `${cat ? cat.name : ''} › ${fol ? fol.name : 'ללא תיקיה'}`;
+        $('view-doc-category-folder').textContent = `${cat ? cat.name : ''} › ${folderLabel(cat, doc)}`;
         $('view-doc-icon').innerHTML = `<i class="fa-solid ${getFileIcon(doc.fileType)}"></i>`;
         $('view-doc-date').textContent = formatDate(doc.date) || '-';
         $('view-doc-expiry').textContent = doc.expiryDate ? formatDate(doc.expiryDate) : 'ללא תפוגה';
@@ -1198,12 +1297,26 @@
         ['dragenter', 'dragover'].forEach(n => dz.addEventListener(n, () => dz.classList.add('drop-active')));
         ['dragleave', 'drop'].forEach(n => dz.addEventListener(n, () => dz.classList.remove('drop-active')));
         dz.addEventListener('drop', e => {
-            if (e.dataTransfer.files.length) { $('doc-file-input').files = e.dataTransfer.files; handleFileSelect($('doc-file-input')); }
+            if (e.dataTransfer.files.length) {
+                const input = $('doc-file-input');
+                const dt = new DataTransfer();
+                [...e.dataTransfer.files].slice(0, input.multiple ? undefined : 1).forEach(f => dt.items.add(f));
+                input.files = dt.files;
+                handleFileSelect(input);
+            }
         });
     }
     function handleFileSelect(input) {
-        const f = input.files && input.files[0];
-        if (!f) return;
+        const files = [...(input.files || [])];
+        const multi = !$('doc-edit-id').value && files.length > 1;
+        $('doc-title-wrap').classList.toggle('hidden', multi);
+        $('doc-title-input').required = !multi;
+        if (!files.length) return;
+        if (multi) {
+            $('drop-zone-text').textContent = `נבחרו ${files.length} קבצים. לכל קובץ ייווצר מסמך נפרד, והשם ייקח משם הקובץ.`;
+            return;
+        }
+        const f = files[0];
         $('drop-zone-text').textContent = `נבחר: ${f.name} (${formatSize(f.size)})`;
         if (!$('doc-title-input').value.trim()) $('doc-title-input').value = f.name.replace(/\.[^.]+$/, '');
     }
@@ -1330,7 +1443,7 @@
             if (cat) Object.assign(cat, { name, description, icon });
             saveData(); closeCategoryModal(); render();
         } else {
-            const cat = { id: uid('cat'), name, description, icon, folders: [{ id: uid('fol'), name: 'כללי' }] };
+            const cat = { id: uid('cat'), name, description, icon, folders: [], isFavorite: false };
             appData.categories.push(cat);
             saveData(); closeCategoryModal(); switchView('category', cat.id);
             toast('הקטגוריה נוצרה');
@@ -1338,11 +1451,15 @@
     }
     let moveResolve = null, moveCtx = null;
     function fillMoveFolders() {
-        const c = moveCtx; if (!c) return;
-        const opts = fs => fs.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
-        if (c.mode === 'folder') { $('move-folder-select').innerHTML = opts(c.folders); return; }
-        const cat = getCat($('move-cat-select').value);
-        $('move-folder-select').innerHTML = '<option value="">ללא תיקיה</option>' + (cat ? opts(cat.folders) : '');
+        const c = moveCtx;
+        if (!c) return;
+        let options;
+        if (c.mode === 'folder') options = c.options;
+        else {
+            const cat = getCat($('move-cat-select').value);
+            options = [{ id: '', label: 'ללא תיקיה' }, ...(cat ? folderOptions(cat) : [])];
+        }
+        $('move-folder-select').innerHTML = options.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
     }
     function askMoveTarget(cfg) {
         return new Promise(resolve => {
@@ -1367,7 +1484,7 @@
         const docs = appData.documents.filter(d => d.categoryId === catId);
         let target = null;
         if (docs.length) {
-            const others = appData.categories.filter(c => c.id !== catId);
+            const others = sortedCategories().filter(c => c.id !== catId);
             if (!others.length) {
                 await askConfirm('אי אפשר למחוק את הקטגוריה', `בקטגוריה "${cat.name}" יש ${docs.length} מסמכים. כדי למחוק אותה צריך להעביר אותם לקטגוריה אחרת, ולכן צריך ליצור קודם קטגוריה נוספת.`, 'הבנתי');
                 return;
@@ -1385,16 +1502,62 @@
         toast(target ? `${docs.length} מסמכים הועברו והקטגוריה נמחקה` : 'הקטגוריה נמחקה');
     }
 
-    function openAddFolderModal(catId) {
+    // ---- כוכב וסדר קטגוריות ----
+    function toggleCategoryStar(id, event) {
+        if (event) event.stopPropagation();
+        const c = getCat(id);
+        if (!c) return;
+        c.isFavorite = !c.isFavorite;
+        saveData(); render();
+        if (!$('reorder-modal').classList.contains('hidden')) renderReorderList();
+    }
+    function openReorderModal() { closeSidebarIfMobile(); renderReorderList(); $('reorder-modal').classList.remove('hidden'); }
+    function closeReorderModal() { $('reorder-modal').classList.add('hidden'); }
+    function renderReorderList() {
+        const list = sortedCategories();
+        $('reorder-list').innerHTML = list.length === 0 ? '<p class="text-sm text-apple-gray text-center py-4">אין קטגוריות עדיין.</p>' : list.map((c, i) => {
+            const canUp = i > 0 && !!list[i - 1].isFavorite === !!c.isFavorite;
+            const canDown = i < list.length - 1 && !!list[i + 1].isFavorite === !!c.isFavorite;
+            return `<div class="flex items-center gap-2 p-2.5 rounded-xl bg-apple-lightGray/50 dark:bg-apple-darkBorder/40">
+                <i class="fa-solid ${safeIcon(c.icon)} w-5 text-center text-apple-blue"></i>
+                <span class="flex-1 truncate text-sm font-medium">${esc(c.name)}</span>
+                <button onclick="toggleCategoryStar('${c.id}')" class="icon-btn ${c.isFavorite ? '!text-amber-500' : ''}" aria-label="סמן בכוכב"><i class="fa-${c.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
+                <button onclick="moveCategory('${c.id}',-1)" ${canUp ? '' : 'disabled'} class="icon-btn disabled:opacity-30 disabled:cursor-not-allowed" aria-label="הזז למעלה"><i class="fa-solid fa-chevron-up text-xs"></i></button>
+                <button onclick="moveCategory('${c.id}',1)" ${canDown ? '' : 'disabled'} class="icon-btn disabled:opacity-30 disabled:cursor-not-allowed" aria-label="הזז למטה"><i class="fa-solid fa-chevron-down text-xs"></i></button>
+            </div>`;
+        }).join('');
+    }
+    function moveCategory(id, dir) {
+        const list = sortedCategories();
+        const i = list.findIndex(c => c.id === id);
+        const other = list[i + dir];
+        if (i < 0 || !other || !!other.isFavorite !== !!list[i].isFavorite) return;
+        const a = appData.categories.findIndex(c => c.id === id), b = appData.categories.findIndex(c => c.id === other.id);
+        [appData.categories[a], appData.categories[b]] = [appData.categories[b], appData.categories[a]];
+        saveData(); render(); renderReorderList();
+    }
+
+    // ---- תיקיות (כולל תיקיות בתוך תיקיות) ----
+    function fillFolderParentSelect(cat, excludeIds, selected) {
+        $('folder-parent-select').innerHTML = '<option value="">ישירות בקטגוריה (ללא תיקיית אב)</option>' +
+            folderOptions(cat, excludeIds).map(o => `<option value="${o.id}" ${o.id === selected ? 'selected' : ''}>בתוך: ${esc(o.label)}</option>`).join('');
+    }
+    function openAddFolderModal(catId, parentId = null) {
+        const cat = getCat(catId);
+        if (!cat) return;
         $('folder-modal-title').textContent = 'הוספת תיקיה חדשה';
         $('folder-cat-id').value = catId; $('folder-edit-id').value = ''; $('folder-name-input').value = '';
+        const p = parentId !== null ? parentId : (currentView === 'category' && activeCategoryId === catId ? listState.folder : '');
+        fillFolderParentSelect(cat, [], p);
         $('folder-modal').classList.remove('hidden'); $('folder-name-input').focus();
     }
     function openEditFolderModal(catId, folId) {
-        const f = (getCat(catId) || { folders: [] }).folders.find(x => x.id === folId);
+        const cat = getCat(catId);
+        const f = cat && cat.folders.find(x => x.id === folId);
         if (!f) return;
-        $('folder-modal-title').textContent = 'שינוי שם תיקיה';
+        $('folder-modal-title').textContent = 'עריכת תיקיה';
         $('folder-cat-id').value = catId; $('folder-edit-id').value = folId; $('folder-name-input').value = f.name;
+        fillFolderParentSelect(cat, [folId, ...descendantFolderIds(cat, folId)], f.parentId || '');
         $('folder-modal').classList.remove('hidden'); $('folder-name-input').focus();
     }
     function closeFolderModal() { $('folder-modal').classList.add('hidden'); }
@@ -1403,50 +1566,170 @@
         const cat = getCat($('folder-cat-id').value);
         const name = $('folder-name-input').value.trim();
         const editId = $('folder-edit-id').value;
+        const parentId = $('folder-parent-select').value;
         if (!cat || !name) return;
-        if (cat.folders.some(f => f.id !== editId && f.name === name)) return toast('כבר קיימת תיקיה בשם הזה בקטגוריה');
-        if (editId) { const f = cat.folders.find(x => x.id === editId); if (f) f.name = name; }
-        else cat.folders.push({ id: uid('fol'), name });
+        if (cat.folders.some(f => f.id !== editId && f.name === name && (f.parentId || '') === parentId)) return toast('כבר קיימת תיקיה בשם הזה באותו מקום');
+        if (editId) { const f = cat.folders.find(x => x.id === editId); if (f) { f.name = name; f.parentId = parentId; } }
+        else cat.folders.push({ id: uid('fol'), name, parentId });
         saveData(); closeFolderModal(); render();
     }
     async function deleteFolder(catId, folId) {
         const cat = getCat(catId);
         const f = cat && cat.folders.find(x => x.id === folId);
         if (!f) return;
-        const docs = appData.documents.filter(d => d.categoryId === catId && d.folderId === folId);
+        const subtree = [folId, ...descendantFolderIds(cat, folId)];
+        const subCount = subtree.length - 1;
+        const docs = appData.documents.filter(d => d.categoryId === catId && subtree.includes(d.folderId));
         let target = null;
         if (docs.length) {
-            const others = cat.folders.filter(x => x.id !== folId);
-            if (!others.length) {
-                await askConfirm('אי אפשר למחוק את התיקיה', `בתיקיה "${f.name}" יש ${docs.length} מסמכים. כדי למחוק אותה צריך להעביר אותם לתיקיה אחרת, ולכן צריך ליצור קודם תיקיה נוספת בקטגוריה.`, 'הבנתי');
-                return;
-            }
             target = await askMoveTarget({
-                mode: 'folder', categoryId: catId, folders: others, okLabel: 'העבר ומחק תיקיה',
+                mode: 'folder', categoryId: catId, okLabel: 'העבר ומחק תיקיה',
+                options: [{ id: '', label: 'ישירות בקטגוריה (ללא תיקיה)' }, ...folderOptions(cat, subtree)],
                 title: 'העברת מסמכים לפני מחיקה',
-                text: `בתיקיה "${f.name}" יש ${docs.length} מסמכים (כולל מסמכים בסל המחזור). בחר לאיזו תיקיה להעביר אותם. התיקיה תימחק רק אחרי ההעברה.`
+                text: `בתיקיה "${f.name}"${subCount ? ` ובתיקיות המשנה שלה (${subCount})` : ''} יש ${docs.length} מסמכים (כולל מסמכים בסל המחזור). בחר לאן להעביר אותם. התיקיה${subCount ? ' ותיקיות המשנה שלה יימחקו' : ' תימחק'} רק אחרי ההעברה.`
             });
             if (!target) return;
-        } else if (!await askConfirm('מחיקת תיקיה', `בטוח שברצונך למחוק את התיקיה "${f.name}"?`, 'מחק תיקיה', true)) return;
+        } else if (!await askConfirm('מחיקת תיקיה', subCount ? `התיקיה "${f.name}" ו-${subCount} תיקיות המשנה שלה (כולן ריקות ממסמכים) יימחקו.` : `בטוח שברצונך למחוק את התיקיה "${f.name}"?`, 'מחק תיקיה', true)) return;
         if (target) docs.forEach(d => { d.folderId = target.folderId; });
-        cat.folders = cat.folders.filter(x => x.id !== folId);
-        if (listState.folder === folId) listState.folder = 'all';
+        cat.folders = cat.folders.filter(x => !subtree.includes(x.id));
+        if (subtree.includes(listState.folder)) listState.folder = f.parentId || '';
         saveData(); render();
         toast(target ? `${docs.length} מסמכים הועברו והתיקיה נמחקה` : 'התיקיה נמחקה');
+    }
+
+    // ---- ניהול תגיות ----
+    const tagsSorted = () => [...appData.tags].sort((a, b) => a.localeCompare(b, 'he'));
+    const cleanTag = s => String(s || '').replace(/[,\n]/g, ' ').trim().slice(0, 30);
+    const findTag = name => appData.tags.find(t => t.toLowerCase() === name.toLowerCase());
+    let docFormTags = [], editingTagIndex = null;
+
+    function openTagsModal() {
+        closeSidebarIfMobile();
+        editingTagIndex = null; $('tag-new-input').value = '';
+        renderTagsList();
+        $('tags-modal').classList.remove('hidden');
+    }
+    function closeTagsModal() {
+        $('tags-modal').classList.add('hidden');
+        if (!$('doc-modal').classList.contains('hidden')) renderDocTagsPicker();
+    }
+    function renderTagsList() {
+        const tags = tagsSorted();
+        $('tags-list').innerHTML = tags.length === 0
+            ? '<p class="text-sm text-apple-gray text-center py-6">אין תגיות עדיין. הוסף תגית ראשונה למעלה.</p>'
+            : tags.map((t, i) => {
+                if (editingTagIndex === i) return `<form onsubmit="renameTag(event, ${i})" class="flex items-center gap-2">
+                    <input id="tag-rename-input" class="inp !py-2" maxlength="30" value="${esc(t)}" aria-label="שם התגית">
+                    <button class="btn-primary !px-3 !py-2 !text-xs">שמור</button>
+                    <button type="button" onclick="editingTagIndex=null;renderTagsList()" class="btn-ghost !px-3 !py-2 !text-xs">ביטול</button></form>`;
+                const n = appData.documents.filter(d => d.tags.includes(t)).length;
+                return `<div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-apple-lightGray/50 dark:bg-apple-darkBorder/40">
+                    <div class="flex items-center gap-2 min-w-0"><i class="fa-solid fa-tag text-apple-blue text-xs"></i><span class="font-medium text-sm truncate">${esc(t)}</span><span class="text-[11px] text-apple-gray shrink-0">${n} מסמכים</span></div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="startRenameTag(${i})" class="icon-btn" aria-label="שנה שם תגית"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="deleteTag(${i})" class="icon-btn hover:!text-red-600" aria-label="מחק תגית"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div></div>`;
+            }).join('');
+    }
+    function addTagFromManager(e) {
+        e.preventDefault();
+        const name = cleanTag($('tag-new-input').value);
+        if (!name) return;
+        if (findTag(name)) return toast('התגית הזו כבר קיימת');
+        appData.tags.push(name); saveData();
+        $('tag-new-input').value = '';
+        renderTagsList();
+    }
+    function startRenameTag(i) {
+        editingTagIndex = i; renderTagsList();
+        const inp = $('tag-rename-input'); if (inp) { inp.focus(); inp.select(); }
+    }
+    function renameTag(e, i) {
+        e.preventDefault();
+        const old = tagsSorted()[i];
+        const neu = cleanTag($('tag-rename-input').value);
+        if (!old || !neu) return toast('נא להזין שם לתגית');
+        const existing = findTag(neu);
+        if (existing && existing !== old) return toast('תגית בשם הזה כבר קיימת');
+        editingTagIndex = null;
+        if (neu !== old) {
+            appData.tags = appData.tags.map(t => t === old ? neu : t);
+            appData.documents.forEach(d => { if (d.tags.includes(old)) d.tags = [...new Set(d.tags.map(t => t === old ? neu : t))]; });
+            docFormTags = docFormTags.map(t => t === old ? neu : t);
+            saveData(); render();
+        }
+        renderTagsList();
+    }
+    async function deleteTag(i) {
+        const t = tagsSorted()[i];
+        if (!t) return;
+        const n = appData.documents.filter(d => d.tags.includes(t)).length;
+        if (!await askConfirm('מחיקת תגית', n ? `התגית "${t}" תוסר מ-${n} מסמכים. המסמכים עצמם לא יימחקו.` : `בטוח שברצונך למחוק את התגית "${t}"?`, 'מחק תגית', true)) return;
+        appData.tags = appData.tags.filter(x => x !== t);
+        appData.documents.forEach(d => { d.tags = d.tags.filter(x => x !== t); });
+        docFormTags = docFormTags.filter(x => x !== t);
+        saveData(); render(); renderTagsList();
+    }
+    function renderDocTagsPicker() {
+        const tags = tagsSorted();
+        $('doc-tags-picker').innerHTML = tags.length === 0 ? '<p class="text-xs text-apple-gray">אין תגיות עדיין. הוסף תגית חדשה למטה.</p>' : tags.map((t, i) => {
+            const on = docFormTags.includes(t);
+            return `<button type="button" onclick="toggleDocTag(${i})" aria-pressed="${on}" class="px-3 py-1.5 rounded-full text-xs font-medium border transition ${on ? 'bg-apple-blue text-white border-apple-blue' : 'border-apple-border/60 dark:border-apple-darkBorder text-apple-gray hover:border-apple-blue hover:text-apple-blue'}">${on ? '<i class="fa-solid fa-check ml-1 text-[10px]"></i>' : ''}${esc(t)}</button>`;
+        }).join('');
+    }
+    function toggleDocTag(i) {
+        const t = tagsSorted()[i];
+        if (!t) return;
+        docFormTags = docFormTags.includes(t) ? docFormTags.filter(x => x !== t) : [...docFormTags, t];
+        renderDocTagsPicker();
+    }
+    function setDocFormTags(arr) { docFormTags = [...arr]; $('doc-new-tag').value = ''; renderDocTagsPicker(); }
+    function addTagFromDocModal() {
+        const inp = $('doc-new-tag');
+        const name = cleanTag(inp.value);
+        if (!name) return;
+        let t = findTag(name);
+        if (!t) { appData.tags.push(name); t = name; saveData(); }
+        if (!docFormTags.includes(t)) docFormTags.push(t);
+        inp.value = '';
+        renderDocTagsPicker();
+    }
+
+    // ---- נתוני דמו ישנים ----
+    const DEMO_CAT_IDS = ['cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5'], DEMO_DOC_IDS = ['doc-1', 'doc-2'];
+    function hasDemoData() {
+        return appData.documents.some(d => DEMO_DOC_IDS.includes(d.id)) || appData.categories.some(c => DEMO_CAT_IDS.includes(c.id));
+    }
+    function demoBanner() {
+        return hasDemoData() ? `<div class="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-amber-300/60">
+            <p class="text-sm"><i class="fa-solid fa-broom text-amber-500 ml-2"></i>נשארו באפליקציה קטגוריות ומסמכים לדוגמה מהגרסה הקודמת.</p>
+            <button onclick="removeDemoData()" class="btn-soft shrink-0">הסר נתוני דמו</button></div>` : '';
+    }
+    async function removeDemoData() {
+        if (!await askConfirm('הסרת נתוני דמו', 'יימחקו הקטגוריות והמסמכים שהגיעו כדוגמה. מסמכים שהוספת בעצמך, ומסמכי דמו שצירפת להם קובץ, יישארו במקומם יחד עם הקטגוריות שלהם.', 'הסר נתוני דמו', true)) return;
+        appData.documents = appData.documents.filter(d => !(DEMO_DOC_IDS.includes(d.id) && !d.fileKey));
+        appData.categories = appData.categories.filter(c => !(DEMO_CAT_IDS.includes(c.id) && !appData.documents.some(d => d.categoryId === c.id)));
+        saveData(); switchView('main-dashboard');
+        toast('נתוני הדמו הוסרו');
     }
 
     // =====================================================================
     //  טופס מסמך
     // =====================================================================
     function populateCatDropdown() {
-        $('doc-cat-select').innerHTML = appData.categories.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
-        if (appData.categories.length) updateFolderDropdownForDoc(appData.categories[0].id);
+        $('doc-cat-select').innerHTML = sortedCategories().map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+        if (appData.categories.length) updateFolderDropdownForDoc(sortedCategories()[0].id);
     }
     function updateFolderDropdownForDoc(catId) {
         const cat = getCat(catId);
-        $('doc-folder-select').innerHTML = '<option value="">ללא תיקיה</option>' + (cat ? cat.folders.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('') : '');
+        $('doc-folder-select').innerHTML = '<option value="">ללא תיקיה</option>' + (cat ? folderOptions(cat).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('') : '');
     }
-    function resetDropText() { $('drop-zone-text').textContent = 'גרור קובץ לכאן או לחץ לבחירה (PDF, Word, Excel, תמונה)'; }
+    function setDocModalMode(addMode) {
+        $('doc-file-input').multiple = addMode;
+        $('doc-title-wrap').classList.remove('hidden');
+        $('doc-title-input').required = true;
+    }
+    function resetDropText() { $('drop-zone-text').textContent = 'גרור קבצים לכאן או לחץ לבחירה (אפשר לבחור כמה קבצים יחד)'; }
 
     function openAddDocModal(catId = null) {
         closeSidebarIfMobile();
@@ -1459,9 +1742,10 @@
             if (currentView === 'category' && cat.folders.some(f => f.id === listState.folder)) $('doc-folder-select').value = listState.folder;
         }
         $('doc-modal-title').textContent = 'מסמך חדש';
+        setDocModalMode(true);
         $('doc-edit-id').value = ''; $('doc-title-input').value = ''; $('doc-file-input').value = '';
         $('doc-status-select').value = 'approved'; $('doc-expiry-input').value = '';
-        $('doc-tags-input').value = ''; $('doc-content-input').value = '';
+        setDocFormTags([]); $('doc-content-input').value = '';
         resetDropText();
         $('doc-modal').classList.remove('hidden');
         $('doc-title-input').focus();
@@ -1471,15 +1755,16 @@
         if (!doc) return;
         populateCatDropdown();
         $('doc-modal-title').textContent = 'עריכת מסמך';
+        setDocModalMode(false);
         $('doc-edit-id').value = doc.id; $('doc-title-input').value = doc.title; $('doc-file-input').value = '';
         $('doc-cat-select').value = doc.categoryId;
         updateFolderDropdownForDoc(doc.categoryId);
         $('doc-folder-select').value = doc.folderId || '';
         $('doc-status-select').value = doc.status || 'approved';
         $('doc-expiry-input').value = doc.expiryDate || '';
-        $('doc-tags-input').value = doc.tags.join(', ');
+        setDocFormTags(doc.tags);
         $('doc-content-input').value = doc.content || '';
-        $('drop-zone-text').textContent = doc.fileName ? `קובץ נוכחי: ${doc.fileName} (בחירת קובץ חדש תוסיף גרסה)` : 'גרור קובץ לכאן או לחץ לבחירה (PDF, Word, Excel, תמונה)';
+        $('drop-zone-text').textContent = doc.fileName ? `קובץ נוכחי: ${doc.fileName} (בחירת קובץ חדש תוסיף גרסה)` : 'גרור קובץ לכאן או לחץ לבחירה';
         $('doc-modal').classList.remove('hidden');
         $('doc-title-input').focus();
     }
@@ -1490,27 +1775,46 @@
         const btn = $('doc-submit-btn');
         if (btn.disabled) return;
         const editId = $('doc-edit-id').value;
+        const files = [...($('doc-file-input').files || [])];
+        const multi = !editId && files.length > 1;
         const fields = {
             title: $('doc-title-input').value.trim(),
             categoryId: $('doc-cat-select').value,
             folderId: $('doc-folder-select').value,
             status: $('doc-status-select').value,
             expiryDate: $('doc-expiry-input').value,
-            tags: [...new Set($('doc-tags-input').value.split(',').map(t => t.trim()).filter(Boolean))],
+            tags: [...new Set(docFormTags)],
             content: $('doc-content-input').value.trim()
         };
-        if (!fields.title) return toast('נא להזין שם למסמך');
-        const file = $('doc-file-input').files && $('doc-file-input').files[0];
-        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> שומר...';
+        if (!multi && !fields.title) return toast('נא להזין שם למסמך');
+        const spinner = '<i class="fa-solid fa-spinner fa-spin"></i> ';
+        btn.disabled = true; btn.innerHTML = spinner + 'שומר...';
         try {
+            if (multi) {
+                let done = 0;
+                const results = await Promise.allSettled(files.map(async f => {
+                    const doc = { id: uid('doc'), ...fields, title: f.name.replace(/\.[^.]+$/, '') || f.name, date: today(), size: '', fileName: '', fileKey: '', fileType: 'other', isFavorite: false, isDeleted: false, versions: [] };
+                    await attachFile(doc, f);
+                    done++; btn.innerHTML = `${spinner}מעלה ${done}/${files.length}`;
+                    return doc;
+                }));
+                const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+                const failed = results.length - ok.length;
+                appData.documents.push(...ok);
+                saveData();
+                if (ok.length) closeDocModal();
+                render();
+                toast(failed ? `${ok.length} מסמכים נוספו, ${failed} נכשלו. ייתכן שהאחסון בדפדפן מלא.` : `${ok.length} מסמכים נוספו`);
+                return;
+            }
             if (editId) {
                 const doc = getDoc(editId);
                 if (!doc) throw new Error('המסמך לא נמצא');
-                if (file) await attachFile(doc, file);
+                if (files[0]) await attachFile(doc, files[0]);
                 Object.assign(doc, fields);
             } else {
                 const doc = { id: uid('doc'), ...fields, date: today(), size: '', fileName: '', fileKey: '', fileType: 'other', isFavorite: false, isDeleted: false, versions: [] };
-                if (file) await attachFile(doc, file);
+                if (files[0]) await attachFile(doc, files[0]);
                 appData.documents.push(doc);
             }
             saveData(); closeDocModal(); render();
@@ -1521,7 +1825,6 @@
         } finally { btn.disabled = false; btn.textContent = 'שמור מסמך'; }
     }
     </script>
-
     <script>
     // =====================================================================
     //  סנכרון בין מכשירים (Firebase: Auth + Firestore)
@@ -1563,7 +1866,7 @@
                 const [app, au, fs] = await Promise.all([import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js')]);
                 A = au; F = fs;
                 const a = app.initializeApp(firebaseConfig);
-                auth = A.getAuth(a); db = F.getFirestore(a);
+                auth = A.getAuth(a); db = F.initializeFirestore(a, { experimentalForceLongPolling: true });
                 A.onAuthStateChanged(auth, onUser);
             } catch (e) { console.warn('Firebase לא נטען', e); setStatus('סנכרון לא זמין כרגע', 'err'); }
         }
@@ -1587,6 +1890,7 @@
 
         function syncError(e) {
             console.error('שגיאת סנכרון', e);
+            if (!navigator.onLine) { setStatus('לא מקוון - יסונכרן כשהחיבור יחזור'); return; }
             setStatus('שגיאת סנכרון - לחץ לנסות שוב', 'err');
             const code = (e && (e.code || e.message)) || 'unknown';
             const hints = {
@@ -1715,6 +2019,7 @@
                 else if (!e || e.code !== 'auth/popup-closed-by-user') { console.error(e); toast('ההתחברות נכשלה.'); }
             }
         };
+        window.addEventListener('online', () => { if (user) onUser(user); });
         init();
     })();
     </script>
