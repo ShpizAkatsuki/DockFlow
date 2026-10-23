@@ -10,6 +10,25 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="DocFlow">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <script>
+    // באנר שגיאות זמני לאבחון (לחיצה עליו סוגרת אותו)
+    (function () {
+        function show(msg) {
+            try {
+                var b = document.getElementById('err-banner');
+                if (!b) {
+                    b = document.createElement('div'); b.id = 'err-banner';
+                    b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#b91c1c;color:#fff;font:13px/1.4 sans-serif;padding:10px 14px;direction:ltr;text-align:left;white-space:pre-wrap;max-height:40vh;overflow:auto';
+                    b.onclick = function () { b.remove(); };
+                    (document.body || document.documentElement).appendChild(b);
+                }
+                b.textContent += (b.textContent ? '\n' : '') + msg;
+            } catch (e) {}
+        }
+        window.addEventListener('error', function (e) { if (e && e.message) show('Error: ' + e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
+        window.addEventListener('unhandledrejection', function (e) { var r = e.reason; show('Promise: ' + ((r && (r.message || r.code)) || r)); });
+    })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -2024,7 +2043,17 @@
     })();
     </script>
     <script>
-    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e)));
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+        if (/[?&]nosw\b/.test(location.search)) {
+            navigator.serviceWorker.getRegistrations()
+                .then(rs => Promise.all(rs.map(r => r.unregister())))
+                .then(() => caches.keys()).then(ks => Promise.all(ks.map(k => caches.delete(k))))
+                .finally(() => location.replace(location.pathname));
+            return;
+        }
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e)));
+    })();
     </script>
 </body>
 </html>
