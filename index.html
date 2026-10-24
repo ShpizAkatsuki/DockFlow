@@ -290,23 +290,23 @@
     <div id="folder-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden p-3" role="dialog" aria-modal="true">
         <div class="bg-white dark:bg-apple-darkCard rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-apple-border/50 dark:border-apple-darkBorder">
             <div class="px-6 py-4 border-b border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between bg-apple-lightGray/30 dark:bg-apple-darkBorder/20">
-                <h3 id="folder-modal-title" class="font-bold text-base">הוספת תיקיה חדשה</h3>
+                <h3 id="folder-modal-title" class="font-bold text-base">הוספת תת-קטגוריה חדשה</h3>
                 <button onclick="closeFolderModal()" class="icon-btn" aria-label="סגור"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="folder-form" onsubmit="handleFolderSubmit(event)" class="p-6 space-y-4">
                 <input type="hidden" id="folder-cat-id">
                 <input type="hidden" id="folder-edit-id">
                 <div>
-                    <label class="lbl" for="folder-name-input">שם התיקיה</label>
+                    <label class="lbl" for="folder-name-input">שם התת-קטגוריה</label>
                     <input type="text" id="folder-name-input" required maxlength="60" placeholder="לדוגמה: חשבוניות 2026" class="inp">
                 </div>
                 <div>
-                    <label class="lbl" for="folder-parent-select">מיקום התיקיה</label>
+                    <label class="lbl" for="folder-parent-select">מיקום התת-קטגוריה</label>
                     <select id="folder-parent-select" class="inp"></select>
                 </div>
                 <div class="flex items-center justify-end gap-3 pt-4 border-t border-apple-border/40 dark:border-apple-darkBorder">
                     <button type="button" onclick="closeFolderModal()" class="btn-ghost">ביטול</button>
-                    <button type="submit" class="btn-primary">שמור תיקיה</button>
+                    <button type="submit" class="btn-primary">שמור תת-קטגוריה</button>
                 </div>
             </form>
         </div>
@@ -328,10 +328,10 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="lbl" for="doc-cat-select">קטגוריה</label>
-                        <select id="doc-cat-select" onchange="updateFolderDropdownForDoc(this.value)" required class="inp"></select>
+                        <select id="doc-cat-select" onchange="updateFolderDropdownForDoc(this.value);renderDocTagsPicker()" required class="inp"></select>
                     </div>
                     <div>
-                        <label class="lbl" for="doc-folder-select">תיקיה</label>
+                        <label class="lbl" for="doc-folder-select">תת-קטגוריה</label>
                         <select id="doc-folder-select" class="inp"></select>
                     </div>
                 </div>
@@ -406,6 +406,11 @@
                 <button onclick="closeTagsModal()" class="icon-btn" aria-label="סגור"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="p-6 overflow-y-auto space-y-4">
+                <div>
+                    <label class="lbl" for="tags-cat-select">קטגוריה</label>
+                    <select id="tags-cat-select" onchange="changeTagsCat(this.value)" class="inp"></select>
+                    <p class="text-[11px] text-apple-gray mt-1">לכל קטגוריה יש תגיות משלה.</p>
+                </div>
                 <form onsubmit="addTagFromManager(event)" class="flex gap-2">
                     <input type="text" id="tag-new-input" maxlength="30" placeholder="תגית חדשה..." aria-label="תגית חדשה" class="inp">
                     <button type="submit" class="btn-primary shrink-0">הוסף</button>
@@ -429,7 +434,7 @@
                     <select id="move-cat-select" onchange="fillMoveFolders()" class="inp"></select>
                 </div>
                 <div>
-                    <label class="lbl" for="move-folder-select">תיקיית יעד</label>
+                    <label class="lbl" for="move-folder-select">תת-קטגוריית יעד</label>
                     <select id="move-folder-select" class="inp"></select>
                 </div>
             </div>
@@ -542,7 +547,7 @@
         while (cur && guard++ < 50) { names.unshift(cur.name); cur = cat.folders.find(f => f.id === cur.parentId); }
         return names.join(' › ');
     }
-    function folderLabel(cat, doc) { return (cat && doc.folderId && folderPath(cat, doc.folderId)) || 'ללא תיקיה'; }
+    function folderLabel(cat, doc) { return (cat && doc.folderId && folderPath(cat, doc.folderId)) || 'ללא תת-קטגוריה'; }
     function folderOptions(cat, excludeIds = []) {
         const out = [];
         const walk = pid => folderChildren(cat, pid).forEach(f => {
@@ -616,7 +621,8 @@
     function normalize(d) {
         d.categories = d.categories.map(c => ({
             id: c.id || uid('cat'), name: c.name || 'ללא שם', description: c.description || '',
-            icon: safeIcon(c.icon), isFavorite: !!c.isFavorite, folders: normFolders(c.folders)
+            icon: safeIcon(c.icon), isFavorite: !!c.isFavorite, folders: normFolders(c.folders),
+            tags: Array.isArray(c.tags) ? c.tags : null
         }));
         d.documents = d.documents.map(x => {
             const doc = {
@@ -628,18 +634,23 @@
             if (!doc.fileKey && !doc.fileUrl) { doc.fileName = ''; doc.size = ''; doc.versions = []; }
             return doc;
         });
-        // תגיות: ספריית תגיות מרכזית (איחוד עם תגיות שכבר קיימות במסמכים)
-        const lib = [];
-        const addLib = t => { t = String(t || '').trim(); if (t && !lib.some(x => x.toLowerCase() === t.toLowerCase())) lib.push(t); };
-        (Array.isArray(d.tags) ? d.tags : []).forEach(addLib);
+        // תגיות לפי קטגוריה: לכל קטגוריה ספריית תגיות משלה (בתוספת התגיות של המסמכים שבה)
+        const legacy = (Array.isArray(d.tags) ? d.tags : []).map(t => String(t || '').trim()).filter(Boolean);
+        d.categories.forEach(c => {
+            const lib = [];
+            const addLib = t => { t = String(t || '').trim(); if (t && !lib.some(x => x.toLowerCase() === t.toLowerCase())) lib.push(t); };
+            (Array.isArray(c.tags) ? c.tags : []).forEach(addLib);
+            d.documents.filter(doc => doc.categoryId === c.id).forEach(doc => doc.tags.forEach(addLib));
+            if (!Array.isArray(c.tags)) legacy.forEach(addLib); // מעבר חד-פעמי: תגיות ישנות שלא שויכו לקטגוריה
+            c.tags = lib;
+        });
         d.documents.forEach(doc => {
             doc.tags = doc.tags.map(t => String(t).trim()).filter(Boolean);
-            doc.tags.forEach(addLib);
-            doc.tags = [...new Set(doc.tags.map(t => lib.find(x => x.toLowerCase() === t.toLowerCase())))];
             const cat = d.categories.find(c => c.id === doc.categoryId);
+            if (cat) doc.tags = [...new Set(doc.tags.map(t => cat.tags.find(x => x.toLowerCase() === t.toLowerCase()) || t))];
             if (doc.folderId && !(cat && cat.folders.some(f => f.id === doc.folderId))) doc.folderId = '';
         });
-        d.tags = lib;
+        d.tags = [];
         return d;
     }
     function loadData() {
@@ -685,7 +696,7 @@
     let docViewMode = localStorage.getItem('docflow_view') || 'list';
     let searchQuery = '';
     let searchTimer;
-    let listState = { sort: 'date-desc', status: 'all', folder: '', flat: false };
+    let listState = { sort: 'date-desc', status: 'all', folder: '', flat: false, tag: '' };
 
     // =====================================================================
     //  הודעות ואישורים
@@ -767,7 +778,7 @@
         currentView = viewId;
         activeCategoryId = catId;
         selectedDocIds = [];
-        listState = { sort: listState.sort, status: 'all', folder: '', flat: false };
+        listState = { sort: listState.sort, status: 'all', folder: '', flat: false, tag: '' };
         searchQuery = ''; $('global-search').value = ''; $('mobile-search').value = '';
         closeSidebarIfMobile();
         render();
@@ -898,7 +909,7 @@
                                 <p class="text-xs text-apple-gray mt-1 line-clamp-2">${esc(cat.description) || '&nbsp;'}</p>
                             </div>
                             <div class="mt-5 pt-3 border-t border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between text-xs text-apple-gray">
-                                <span>${cat.folders.length} תיקיות</span>
+                                <span>${cat.folders.length} תתי-קטגוריות</span>
                                 <span class="font-semibold text-apple-blue">פתח <i class="fa-solid fa-arrow-left text-[10px] mr-1"></i></span>
                             </div>
                         </div>`;
@@ -998,13 +1009,14 @@
         const cur = listState.folder;
         const sub = cur ? [cur, ...descendantFolderIds(cat, cur)] : null;
         let docs;
-        if (listState.flat) docs = sub ? all.filter(d => sub.includes(d.folderId)) : all;
+        if (listState.flat || listState.tag) docs = sub ? all.filter(d => sub.includes(d.folderId)) : all;
         else docs = all.filter(d => cur ? d.folderId === cur : !cat.folders.some(f => f.id === d.folderId));
-        return docs.filter(d => listState.status === 'all' || d.status === listState.status);
+        return docs.filter(d => (listState.status === 'all' || d.status === listState.status) && (!listState.tag || d.tags.includes(listState.tag)));
     }
 
     function renderCategoryDashboard(cat) {
         if (listState.folder && !cat.folders.some(f => f.id === listState.folder)) listState.folder = '';
+        if (listState.tag && !tagsOf(cat.id).includes(listState.tag)) listState.tag = '';
         const cur = listState.folder;
         const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
         const docs = sortDocs(categoryViewDocs(cat));
@@ -1015,16 +1027,21 @@
         const sel = (v, val, l) => `<option value="${val}" ${v === val ? 'selected' : ''}>${l}</option>`;
         const crumbs = `<button onclick="setFolderFilter('')" class="font-semibold hover:text-apple-blue ${cur ? '' : 'text-apple-blue'}">${esc(cat.name)}</button>` +
             trail.map((f, i) => `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setFolderFilter('${f.id}')" class="font-semibold hover:text-apple-blue ${i === trail.length - 1 ? 'text-apple-blue' : ''}">${esc(f.name)}</button>`).join('');
+        const catTags = tagsSorted(cat.id);
+        const tagChips = catTags.length ? `<div class="flex flex-wrap items-center gap-2 px-1"><span class="text-xs font-semibold text-apple-gray"><i class="fa-solid fa-tags ml-1"></i>תגיות:</span>${catTags.map((t, i) => {
+            const on = listState.tag === t, n = catDocs.filter(d => d.tags.includes(t)).length;
+            return `<button onclick="setTagFilter(${i})" aria-pressed="${on}" class="px-3 py-1 rounded-full text-xs font-medium border transition ${on ? 'bg-apple-blue text-white border-apple-blue' : 'border-apple-border/60 dark:border-apple-darkBorder hover:border-apple-blue'}">${esc(t)} <span class="opacity-70">${n}</span></button>`;
+        }).join('')}</div>` : '';
         const folderCard = f => {
             const ids = [f.id, ...descendantFolderIds(cat, f.id)];
             const n = catDocs.filter(d => ids.includes(d.folderId)).length;
             const sc = folderChildren(cat, f.id).length;
             return `<div onclick="setFolderFilter('${f.id}')" onkeydown="if(event.key==='Enter')setFolderFilter('${f.id}')" tabindex="0" role="button" class="card p-4 flex items-center gap-3 hover:shadow-md transition cursor-pointer">
                 <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-folder"></i></div>
-                <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(f.name)}</p><span class="text-[11px] text-apple-gray">${n} מסמכים${sc ? ` · ${sc} תיקיות משנה` : ''}</span></div>
+                <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(f.name)}</p><span class="text-[11px] text-apple-gray">${n} מסמכים${sc ? ` · ${sc} תתי-קטגוריות` : ''}</span></div>
                 <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
-                    <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תיקיה"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                    <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תיקיה"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תת-קטגוריה"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תת-קטגוריה"><i class="fa-solid fa-xmark text-xs"></i></button>
                 </div>
             </div>`;
         };
@@ -1046,11 +1063,15 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="openEditCategoryModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-pen-to-square"></i> ערוך</button>
                     <button onclick="deleteCategory('${cat.id}')" class="btn-soft !text-red-600"><i class="fa-solid fa-trash"></i> מחק</button>
-                    <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-plus"></i> תיקיה חדשה</button>
+                    <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-plus"></i> תת-קטגוריה חדשה</button>
+                    <button onclick="openTagsModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-tags"></i> תגיות</button>
+                    <button onclick="moveCategoryIntoCategory('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-tree"></i> העבר לתוך קטגוריה</button>
                 </div>
             </div>
 
             <div class="flex items-center flex-wrap text-sm px-1" aria-label="מיקום נוכחי">${crumbs}</div>
+
+            ${tagChips}
 
             ${subfolders.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
@@ -1066,7 +1087,7 @@
                     <select onchange="listState.status=this.value;render()" class="inp !w-auto !py-2 !text-xs" aria-label="סינון לפי סטטוס">
                         ${sel(listState.status, 'all', 'כל הסטטוסים')}${Object.entries(STATUS).map(([k, v]) => sel(listState.status, k, v.label)).join('')}
                     </select>
-                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="listState.flat=this.checked;selectedDocIds=[];render()" class="rounded"> הצג גם מתיקיות משנה</label>
+                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="listState.flat=this.checked;selectedDocIds=[];render()" class="rounded"> הצג גם מתתי-קטגוריות</label>
                 </div>
                 <div class="flex items-center gap-2 justify-between">
                     <div id="bulk-actions-toolbar" class="${selectedDocIds.length ? 'flex' : 'hidden'} items-center gap-2 bg-apple-blue/10 p-1.5 rounded-xl border border-apple-blue/20">
@@ -1080,8 +1101,8 @@
             </div>
 
             ${docs.length === 0
-                ? (subfolders.length && !listState.flat
-                    ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה או ללחוץ על "מסמך חדש".</p>`
+                ? (subfolders.length && !listState.flat && !listState.tag
+                    ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתת-קטגוריה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתת-קטגוריה או ללחוץ על "מסמך חדש".</p>`
                     : `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "מסמך חדש" כדי להתחיל.'}</div>`)
                 : docViewMode === 'list' ? renderDocsTable(docs, cat) : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${docs.map(d => renderDocGalleryCard(d, false)).join('')}</div>`}
         </div>`;
@@ -1090,6 +1111,7 @@
 
     function setDocViewMode(m) { docViewMode = m; try { localStorage.setItem('docflow_view', m); } catch (e) {} render(); }
     function setFolderFilter(id) { listState.folder = id; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
+    function setTagFilter(i) { const t = tagsSorted(activeCategoryId)[i]; if (!t) return; listState.tag = listState.tag === t ? '' : t; selectedDocIds = []; render(); }
 
     function renderDocsTable(docs, cat) {
         const allSelected = docs.length && docs.every(d => selectedDocIds.includes(d.id));
@@ -1102,7 +1124,7 @@
                         <th class="py-3 px-4 w-10 text-center"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAllDocs(this)" ${allSelected ? 'checked' : ''} class="rounded" aria-label="בחר הכל"></th>
                         <th class="py-3 px-2 w-8"></th>
                         <th class="py-3 px-4">שם המסמך</th>
-                        <th class="py-3 px-4">תיקיה</th>
+                        <th class="py-3 px-4">תת-קטגוריה</th>
                         <th class="py-3 px-4">סטטוס</th>
                         <th class="py-3 px-4">גודל וסוג</th>
                         <th class="py-3 px-4 text-left">פעולות</th>
@@ -1422,7 +1444,7 @@
     }
 
     // =====================================================================
-    //  קטגוריות ותיקיות
+    //  קטגוריות ותתי-קטגוריות
     // =====================================================================
     function buildIconPicker() {
         $('icon-picker').innerHTML = ICONS.map(i => `<button type="button" data-icon="${i}" onclick="selectCategoryIcon('${i}')" class="h-10 rounded-xl border border-apple-border/60 dark:border-apple-darkBorder flex items-center justify-center text-apple-gray hover:border-apple-blue hover:text-apple-blue transition" aria-label="${i}"><i class="fa-solid ${i}"></i></button>`).join('');
@@ -1466,7 +1488,7 @@
             if (cat) Object.assign(cat, { name, description, icon });
             saveData(); closeCategoryModal(); render();
         } else {
-            const cat = { id: uid('cat'), name, description, icon, folders: [], isFavorite: false };
+            const cat = { id: uid('cat'), name, description, icon, folders: [], tags: [], isFavorite: false };
             appData.categories.push(cat);
             saveData(); closeCategoryModal(); switchView('category', cat.id);
             toast('הקטגוריה נוצרה');
@@ -1480,7 +1502,7 @@
         if (c.mode === 'folder') options = c.options;
         else {
             const cat = getCat($('move-cat-select').value);
-            options = [{ id: '', label: 'ללא תיקיה' }, ...(cat ? folderOptions(cat) : [])];
+            options = [{ id: '', label: 'ללא תת-קטגוריה' }, ...(cat ? folderOptions(cat) : [])];
         }
         $('move-folder-select').innerHTML = options.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
     }
@@ -1519,10 +1541,47 @@
             });
             if (!target) return;
         } else if (!await askConfirm('מחיקת קטגוריה', `בטוח שברצונך למחוק את הקטגוריה "${cat.name}"?`, 'מחק קטגוריה', true)) return;
-        if (target) docs.forEach(d => { d.categoryId = target.categoryId; d.folderId = target.folderId; });
+        if (target) { docs.forEach(d => { d.categoryId = target.categoryId; d.folderId = target.folderId; }); docs.forEach(syncDocTagsToCategory); }
         appData.categories = appData.categories.filter(c => c.id !== catId);
         saveData(); switchView('main-dashboard');
         toast(target ? `${docs.length} מסמכים הועברו והקטגוריה נמחקה` : 'הקטגוריה נמחקה');
+    }
+
+    // ---- העברת קטגוריה להיות תת-קטגוריה של קטגוריה אחרת ----
+    async function moveCategoryIntoCategory(catId) {
+        const src = getCat(catId);
+        if (!src) return;
+        const others = sortedCategories().filter(c => c.id !== catId);
+        if (!others.length) { await askConfirm('אין לאן להעביר', `צריך לפחות קטגוריה נוספת כדי להעביר אליה את "${src.name}".`, 'הבנתי'); return; }
+        const target = await askMoveTarget({
+            mode: 'category', cats: others, okLabel: 'העבר',
+            title: 'העברה להיות תת-קטגוריה',
+            text: `הקטגוריה "${src.name}" תהפוך לתת-קטגוריה בתוך הקטגוריה שתבחר, יחד עם כל התת-קטגוריות, המסמכים והתגיות שלה. אפשר לבחור גם תת-קטגוריה קיימת כמיקום.`
+        });
+        if (!target) return;
+        const dest = getCat(target.categoryId);
+        if (!dest) return;
+        const parentId = target.folderId || '';
+        let name = src.name;
+        while (dest.folders.some(f => (f.parentId || '') === parentId && f.name === name)) name += ' (2)';
+        const top = { id: uid('fol'), name, parentId };
+        const map = {};
+        src.folders.forEach(f => { map[f.id] = uid('fol'); });
+        dest.folders.push(top);
+        src.folders.forEach(f => dest.folders.push({ id: map[f.id], name: f.name, parentId: f.parentId && map[f.parentId] ? map[f.parentId] : top.id }));
+        let moved = 0;
+        appData.documents.forEach(d => {
+            if (d.categoryId !== src.id) return;
+            d.categoryId = dest.id;
+            d.folderId = d.folderId && map[d.folderId] ? map[d.folderId] : top.id;
+            moved++;
+        });
+        (src.tags || []).forEach(t => { if (!findTag(dest.id, t)) dest.tags.push(t); });
+        appData.categories = appData.categories.filter(c => c.id !== src.id);
+        saveData();
+        switchView('category', dest.id);
+        listState.folder = top.id; render();
+        toast(`"${name}" הועברה לתת-קטגוריה בתוך "${dest.name}" (${moved} מסמכים)`);
     }
 
     // ---- כוכב וסדר קטגוריות ----
@@ -1560,15 +1619,15 @@
         saveData(); render(); renderReorderList();
     }
 
-    // ---- תיקיות (כולל תיקיות בתוך תיקיות) ----
+    // ---- תתי-קטגוריות (כולל תתי-קטגוריות בתוך תתי-קטגוריות) ----
     function fillFolderParentSelect(cat, excludeIds, selected) {
-        $('folder-parent-select').innerHTML = '<option value="">ישירות בקטגוריה (ללא תיקיית אב)</option>' +
+        $('folder-parent-select').innerHTML = '<option value="">ישירות בקטגוריה (ללא תת-קטגוריית אב)</option>' +
             folderOptions(cat, excludeIds).map(o => `<option value="${o.id}" ${o.id === selected ? 'selected' : ''}>בתוך: ${esc(o.label)}</option>`).join('');
     }
     function openAddFolderModal(catId, parentId = null) {
         const cat = getCat(catId);
         if (!cat) return;
-        $('folder-modal-title').textContent = 'הוספת תיקיה חדשה';
+        $('folder-modal-title').textContent = 'הוספת תת-קטגוריה חדשה';
         $('folder-cat-id').value = catId; $('folder-edit-id').value = ''; $('folder-name-input').value = '';
         const p = parentId !== null ? parentId : (currentView === 'category' && activeCategoryId === catId ? listState.folder : '');
         fillFolderParentSelect(cat, [], p);
@@ -1578,7 +1637,7 @@
         const cat = getCat(catId);
         const f = cat && cat.folders.find(x => x.id === folId);
         if (!f) return;
-        $('folder-modal-title').textContent = 'עריכת תיקיה';
+        $('folder-modal-title').textContent = 'עריכת תת-קטגוריה';
         $('folder-cat-id').value = catId; $('folder-edit-id').value = folId; $('folder-name-input').value = f.name;
         fillFolderParentSelect(cat, [folId, ...descendantFolderIds(cat, folId)], f.parentId || '');
         $('folder-modal').classList.remove('hidden'); $('folder-name-input').focus();
@@ -1591,7 +1650,7 @@
         const editId = $('folder-edit-id').value;
         const parentId = $('folder-parent-select').value;
         if (!cat || !name) return;
-        if (cat.folders.some(f => f.id !== editId && f.name === name && (f.parentId || '') === parentId)) return toast('כבר קיימת תיקיה בשם הזה באותו מקום');
+        if (cat.folders.some(f => f.id !== editId && f.name === name && (f.parentId || '') === parentId)) return toast('כבר קיימת תת-קטגוריה בשם הזה באותו מקום');
         if (editId) { const f = cat.folders.find(x => x.id === editId); if (f) { f.name = name; f.parentId = parentId; } }
         else cat.folders.push({ id: uid('fol'), name, parentId });
         saveData(); closeFolderModal(); render();
@@ -1606,46 +1665,63 @@
         let target = null;
         if (docs.length) {
             target = await askMoveTarget({
-                mode: 'folder', categoryId: catId, okLabel: 'העבר ומחק תיקיה',
-                options: [{ id: '', label: 'ישירות בקטגוריה (ללא תיקיה)' }, ...folderOptions(cat, subtree)],
+                mode: 'folder', categoryId: catId, okLabel: 'העבר ומחק תת-קטגוריה',
+                options: [{ id: '', label: 'ישירות בקטגוריה (ללא תת-קטגוריה)' }, ...folderOptions(cat, subtree)],
                 title: 'העברת מסמכים לפני מחיקה',
-                text: `בתיקיה "${f.name}"${subCount ? ` ובתיקיות המשנה שלה (${subCount})` : ''} יש ${docs.length} מסמכים (כולל מסמכים בסל המחזור). בחר לאן להעביר אותם. התיקיה${subCount ? ' ותיקיות המשנה שלה יימחקו' : ' תימחק'} רק אחרי ההעברה.`
+                text: `בתת-קטגוריה "${f.name}"${subCount ? ` ובתתי-הקטגוריות שלה (${subCount})` : ''} יש ${docs.length} מסמכים (כולל מסמכים בסל המחזור). בחר לאן להעביר אותם. התת-קטגוריה${subCount ? ' ותתי-הקטגוריות שלה יימחקו' : ' תימחק'} רק אחרי ההעברה.`
             });
             if (!target) return;
-        } else if (!await askConfirm('מחיקת תיקיה', subCount ? `התיקיה "${f.name}" ו-${subCount} תיקיות המשנה שלה (כולן ריקות ממסמכים) יימחקו.` : `בטוח שברצונך למחוק את התיקיה "${f.name}"?`, 'מחק תיקיה', true)) return;
+        } else if (!await askConfirm('מחיקת תת-קטגוריה', subCount ? `התת-קטגוריה "${f.name}" ו-${subCount} תתי-הקטגוריות שלה (כולן ריקות ממסמכים) יימחקו.` : `בטוח שברצונך למחוק את התת-קטגוריה "${f.name}"?`, 'מחק תת-קטגוריה', true)) return;
         if (target) docs.forEach(d => { d.folderId = target.folderId; });
         cat.folders = cat.folders.filter(x => !subtree.includes(x.id));
         if (subtree.includes(listState.folder)) listState.folder = f.parentId || '';
         saveData(); render();
-        toast(target ? `${docs.length} מסמכים הועברו והתיקיה נמחקה` : 'התיקיה נמחקה');
+        toast(target ? `${docs.length} מסמכים הועברו והתת-קטגוריה נמחקה` : 'התת-קטגוריה נמחקה');
     }
 
-    // ---- ניהול תגיות ----
-    const tagsSorted = () => [...appData.tags].sort((a, b) => a.localeCompare(b, 'he'));
+    // ---- ניהול תגיות (לכל קטגוריה תגיות משלה) ----
     const cleanTag = s => String(s || '').replace(/[,\n]/g, ' ').trim().slice(0, 30);
-    const findTag = name => appData.tags.find(t => t.toLowerCase() === name.toLowerCase());
-    let docFormTags = [], editingTagIndex = null;
+    const tagsOf = catId => { const c = getCat(catId); return c && Array.isArray(c.tags) ? c.tags : []; };
+    const tagsSorted = (catId, extra = []) => [...new Set([...tagsOf(catId), ...extra])].sort((a, b) => a.localeCompare(b, 'he'));
+    const findTag = (catId, name) => tagsOf(catId).find(t => t.toLowerCase() === name.toLowerCase());
+    let docFormTags = [], editingTagIndex = null, tagsCatId = null;
+    const docFormCatId = () => $('doc-cat-select').value;
+    const docPickerTags = () => tagsSorted(docFormCatId(), docFormTags);
+    const docModalOpen = () => !$('doc-modal').classList.contains('hidden');
+    function syncDocTagsToCategory(doc) {
+        const c = getCat(doc.categoryId);
+        if (c) doc.tags.forEach(t => { if (!findTag(c.id, t)) c.tags.push(t); });
+    }
 
-    function openTagsModal() {
+    function fillTagsCatSelect() {
+        $('tags-cat-select').innerHTML = sortedCategories().map(c => `<option value="${c.id}" ${c.id === tagsCatId ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    }
+    function changeTagsCat(id) { tagsCatId = id; editingTagIndex = null; renderTagsList(); }
+    function openTagsModal(catId) {
         closeSidebarIfMobile();
-        editingTagIndex = null; $('tag-new-input').value = '';
-        renderTagsList();
+        const first = sortedCategories()[0];
+        const pick = (typeof catId === 'string' && getCat(catId) && catId)
+            || (docModalOpen() ? docFormCatId() : (currentView === 'category' ? activeCategoryId : null))
+            || (first && first.id);
+        if (!pick) { toast('כדי לנהל תגיות צריך קודם ליצור קטגוריה'); return; }
+        tagsCatId = pick; editingTagIndex = null; $('tag-new-input').value = '';
+        fillTagsCatSelect(); renderTagsList();
         $('tags-modal').classList.remove('hidden');
     }
     function closeTagsModal() {
         $('tags-modal').classList.add('hidden');
-        if (!$('doc-modal').classList.contains('hidden')) renderDocTagsPicker();
+        if (docModalOpen()) renderDocTagsPicker();
     }
     function renderTagsList() {
-        const tags = tagsSorted();
+        const tags = tagsSorted(tagsCatId);
         $('tags-list').innerHTML = tags.length === 0
-            ? '<p class="text-sm text-apple-gray text-center py-6">אין תגיות עדיין. הוסף תגית ראשונה למעלה.</p>'
+            ? '<p class="text-sm text-apple-gray text-center py-6">אין תגיות בקטגוריה הזו עדיין. הוסף תגית ראשונה למעלה.</p>'
             : tags.map((t, i) => {
                 if (editingTagIndex === i) return `<form onsubmit="renameTag(event, ${i})" class="flex items-center gap-2">
                     <input id="tag-rename-input" class="inp !py-2" maxlength="30" value="${esc(t)}" aria-label="שם התגית">
                     <button class="btn-primary !px-3 !py-2 !text-xs">שמור</button>
                     <button type="button" onclick="editingTagIndex=null;renderTagsList()" class="btn-ghost !px-3 !py-2 !text-xs">ביטול</button></form>`;
-                const n = appData.documents.filter(d => d.tags.includes(t)).length;
+                const n = appData.documents.filter(d => d.categoryId === tagsCatId && d.tags.includes(t)).length;
                 return `<div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-apple-lightGray/50 dark:bg-apple-darkBorder/40">
                     <div class="flex items-center gap-2 min-w-0"><i class="fa-solid fa-tag text-apple-blue text-xs"></i><span class="font-medium text-sm truncate">${esc(t)}</span><span class="text-[11px] text-apple-gray shrink-0">${n} מסמכים</span></div>
                     <div class="flex items-center gap-1 shrink-0">
@@ -1656,12 +1732,13 @@
     }
     function addTagFromManager(e) {
         e.preventDefault();
+        const cat = getCat(tagsCatId);
         const name = cleanTag($('tag-new-input').value);
-        if (!name) return;
-        if (findTag(name)) return toast('התגית הזו כבר קיימת');
-        appData.tags.push(name); saveData();
+        if (!cat || !name) return;
+        if (findTag(cat.id, name)) return toast('התגית הזו כבר קיימת בקטגוריה');
+        cat.tags.push(name); saveData();
         $('tag-new-input').value = '';
-        renderTagsList();
+        renderTagsList(); render();
     }
     function startRenameTag(i) {
         editingTagIndex = i; renderTagsList();
@@ -1669,39 +1746,43 @@
     }
     function renameTag(e, i) {
         e.preventDefault();
-        const old = tagsSorted()[i];
+        const cat = getCat(tagsCatId);
+        const old = tagsSorted(tagsCatId)[i];
         const neu = cleanTag($('tag-rename-input').value);
-        if (!old || !neu) return toast('נא להזין שם לתגית');
-        const existing = findTag(neu);
-        if (existing && existing !== old) return toast('תגית בשם הזה כבר קיימת');
+        if (!cat || !old || !neu) return toast('נא להזין שם לתגית');
+        const existing = findTag(cat.id, neu);
+        if (existing && existing !== old) return toast('תגית בשם הזה כבר קיימת בקטגוריה');
         editingTagIndex = null;
         if (neu !== old) {
-            appData.tags = appData.tags.map(t => t === old ? neu : t);
-            appData.documents.forEach(d => { if (d.tags.includes(old)) d.tags = [...new Set(d.tags.map(t => t === old ? neu : t))]; });
-            docFormTags = docFormTags.map(t => t === old ? neu : t);
+            cat.tags = cat.tags.map(t => t === old ? neu : t);
+            appData.documents.forEach(d => { if (d.categoryId === cat.id && d.tags.includes(old)) d.tags = [...new Set(d.tags.map(t => t === old ? neu : t))]; });
+            if (docModalOpen() && docFormCatId() === cat.id) docFormTags = docFormTags.map(t => t === old ? neu : t);
+            if (listState.tag === old) listState.tag = neu;
             saveData(); render();
         }
         renderTagsList();
     }
     async function deleteTag(i) {
-        const t = tagsSorted()[i];
-        if (!t) return;
-        const n = appData.documents.filter(d => d.tags.includes(t)).length;
-        if (!await askConfirm('מחיקת תגית', n ? `התגית "${t}" תוסר מ-${n} מסמכים. המסמכים עצמם לא יימחקו.` : `בטוח שברצונך למחוק את התגית "${t}"?`, 'מחק תגית', true)) return;
-        appData.tags = appData.tags.filter(x => x !== t);
-        appData.documents.forEach(d => { d.tags = d.tags.filter(x => x !== t); });
-        docFormTags = docFormTags.filter(x => x !== t);
+        const cat = getCat(tagsCatId);
+        const t = tagsSorted(tagsCatId)[i];
+        if (!cat || !t) return;
+        const n = appData.documents.filter(d => d.categoryId === cat.id && d.tags.includes(t)).length;
+        if (!await askConfirm('מחיקת תגית', n ? `התגית "${t}" תוסר מ-${n} מסמכים בקטגוריה "${cat.name}". המסמכים עצמם לא יימחקו.` : `בטוח שברצונך למחוק את התגית "${t}"?`, 'מחק תגית', true)) return;
+        cat.tags = cat.tags.filter(x => x !== t);
+        appData.documents.forEach(d => { if (d.categoryId === cat.id) d.tags = d.tags.filter(x => x !== t); });
+        if (docModalOpen() && docFormCatId() === cat.id) docFormTags = docFormTags.filter(x => x !== t);
+        if (listState.tag === t) listState.tag = '';
         saveData(); render(); renderTagsList();
     }
     function renderDocTagsPicker() {
-        const tags = tagsSorted();
-        $('doc-tags-picker').innerHTML = tags.length === 0 ? '<p class="text-xs text-apple-gray">אין תגיות עדיין. הוסף תגית חדשה למטה.</p>' : tags.map((t, i) => {
+        const tags = docPickerTags();
+        $('doc-tags-picker').innerHTML = tags.length === 0 ? '<p class="text-xs text-apple-gray">אין תגיות בקטגוריה הזו עדיין. הוסף תגית חדשה למטה.</p>' : tags.map((t, i) => {
             const on = docFormTags.includes(t);
             return `<button type="button" onclick="toggleDocTag(${i})" aria-pressed="${on}" class="px-3 py-1.5 rounded-full text-xs font-medium border transition ${on ? 'bg-apple-blue text-white border-apple-blue' : 'border-apple-border/60 dark:border-apple-darkBorder text-apple-gray hover:border-apple-blue hover:text-apple-blue'}">${on ? '<i class="fa-solid fa-check ml-1 text-[10px]"></i>' : ''}${esc(t)}</button>`;
         }).join('');
     }
     function toggleDocTag(i) {
-        const t = tagsSorted()[i];
+        const t = docPickerTags()[i];
         if (!t) return;
         docFormTags = docFormTags.includes(t) ? docFormTags.filter(x => x !== t) : [...docFormTags, t];
         renderDocTagsPicker();
@@ -1711,8 +1792,10 @@
         const inp = $('doc-new-tag');
         const name = cleanTag(inp.value);
         if (!name) return;
-        let t = findTag(name);
-        if (!t) { appData.tags.push(name); t = name; saveData(); }
+        const cat = getCat(docFormCatId());
+        if (!cat) return toast('בחר קודם קטגוריה');
+        let t = findTag(cat.id, name);
+        if (!t) { cat.tags.push(name); t = name; saveData(); render(); }
         if (!docFormTags.includes(t)) docFormTags.push(t);
         inp.value = '';
         renderDocTagsPicker();
@@ -1745,7 +1828,7 @@
     }
     function updateFolderDropdownForDoc(catId) {
         const cat = getCat(catId);
-        $('doc-folder-select').innerHTML = '<option value="">ללא תיקיה</option>' + (cat ? folderOptions(cat).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('') : '');
+        $('doc-folder-select').innerHTML = '<option value="">ללא תת-קטגוריה</option>' + (cat ? folderOptions(cat).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('') : '');
     }
     function setDocModalMode(addMode) {
         $('doc-file-input').multiple = addMode;
@@ -1809,6 +1892,7 @@
             tags: [...new Set(docFormTags)],
             content: $('doc-content-input').value.trim()
         };
+        { const tc = getCat(fields.categoryId); if (tc) fields.tags.forEach(t => { if (!findTag(tc.id, t)) tc.tags.push(t); }); }
         if (!multi && !fields.title) return toast('נא להזין שם למסמך');
         const spinner = '<i class="fa-solid fa-spinner fa-spin"></i> ';
         btn.disabled = true; btn.innerHTML = spinner + 'שומר...';
