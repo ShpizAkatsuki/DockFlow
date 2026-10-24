@@ -2,7 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <style>html, body { touch-action: pan-x pan-y; }</style>
     <title>DocFlow - ניהול מסמכים חכם</title>
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#0071E3">
@@ -2053,6 +2054,40 @@
             return;
         }
         window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e)));
+    })();
+    </script>
+    <script>
+    // ביטול זום בתנועת צביטה (iOS) וקבלת קבצים משותפים מאפליקציות אחרות
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    (function () {
+        async function consumeShared() {
+            const p = new URLSearchParams(location.search);
+            if (!p.has('share')) return;
+            history.replaceState(null, '', location.pathname);
+            try {
+                const cache = await caches.open('docflow-share');
+                const reqs = (await cache.keys()).sort((a, b) => a.url.localeCompare(b.url));
+                const files = [];
+                for (const r of reqs) {
+                    const res = await cache.match(r);
+                    if (!res) continue;
+                    const blob = await res.blob();
+                    const name = decodeURIComponent(res.headers.get('X-File-Name') || 'file');
+                    files.push(new File([blob], name, { type: blob.type || res.headers.get('Content-Type') || '' }));
+                    await cache.delete(r);
+                }
+                if (!files.length) { toast('לא התקבלו קבצים לשיתוף.'); return; }
+                openAddDocModal();
+                if ($('doc-modal').classList.contains('hidden')) return; // אין קטגוריות עדיין
+                const input = $('doc-file-input');
+                const dt = new DataTransfer();
+                files.slice(0, input.multiple ? undefined : 1).forEach(f => dt.items.add(f));
+                input.files = dt.files;
+                handleFileSelect(input);
+                toast(files.length > 1 ? files.length + ' קבצים התקבלו. בחר קטגוריה ולחץ שמירה.' : 'הקובץ התקבל. בחר קטגוריה ולחץ שמירה.');
+            } catch (err) { console.error(err); toast('קבלת הקבצים המשותפים נכשלה.'); }
+        }
+        window.addEventListener('load', () => setTimeout(consumeShared, 400));
     })();
     </script>
 </body>
