@@ -152,7 +152,7 @@
                 <i id="cloud-icon" class="fa-solid fa-cloud"></i><span id="cloud-label">התחבר לסנכרון (Google)</span>
             </button>
             <button id="drive-btn" onclick="driveConnect()" class="hidden w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition">
-                <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לקבצים)</span>
+                <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לסנכרון)</span>
             </button>
         </div>
 
@@ -1850,7 +1850,7 @@
     </script>
     <script>
     // =====================================================================
-    //  סנכרון בין מכשירים (Firebase: Auth + Firestore)
+    //  סנכרון בין מכשירים: התחברות דרך Firebase, והנתונים והקבצים ב-Google Drive של המשתמש
     // =====================================================================
     (function () {
         const firebaseConfig = {
@@ -1863,17 +1863,21 @@
         };
         const BASE = 'https://www.gstatic.com/firebasejs/10.14.1/';
         const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'; // גישה רק לקבצים ולתיקיות שהאפליקציה יצרה
+        const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
+        const DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
+        const TOKEN_KEY = 'docflow_drive_token';
+        const META_NAME = 'docflow-data.json';
         const DEVICE = localStorage.getItem('docflow_device') || (() => { const d = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('docflow_device', d); return d; })();
 
-        let A = null, F = null, auth = null, db = null, user = null, unsub = null;
-        let pushTimer = null, pushing = false, dirty = false, applying = false;
+        let A = null, F = null, fbApp = null, auth = null, db = null, user = null;
+        let pushTimer = null, pollTimer = null, pushing = false, dirty = false, applying = false, syncing = false;
+        let metaId = null, driveWarned = false, autoArmed = false, autoDisabled = false;
 
         const localUpdated = () => Number(localStorage.getItem('docflow_updated')) || 0;
-        const mainRef = () => F.doc(db, 'users', user.uid, 'data', 'main');
-        const fileRef = id => F.doc(db, 'users', user.uid, 'files', id);
-        const upKey = () => 'docflow_cloud_files_' + user.uid;
+        const upKey = () => 'docflow_drive_files_' + user.uid;
         const getUploaded = () => { try { return new Set(JSON.parse(localStorage.getItem(upKey()) || '[]')); } catch (e) { return new Set(); } };
         const saveUploaded = s => { try { localStorage.setItem(upKey(), JSON.stringify([...s])); } catch (e) {} };
+        const who = () => (user && user.email) || '';
 
         function setStatus(text, state) {
             const l = document.getElementById('cloud-label'), i = document.getElementById('cloud-icon');
@@ -1882,96 +1886,39 @@
             i.className = 'fa-solid ' + (state === 'busy' ? 'fa-rotate fa-spin' : state === 'ok' ? 'fa-cloud-arrow-up' : state === 'err' ? 'fa-triangle-exclamation' : 'fa-cloud');
         }
 
-        async function init() {
-            setStatus('התחבר לסנכרון (Google)');
-            try {
-                const [app, au, fs] = await Promise.all([import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js'), import(BASE + 'firebase-firestore.js')]);
-                A = au; F = fs;
-                const a = app.initializeApp(firebaseConfig);
-                auth = A.getAuth(a); db = F.initializeFirestore(a, { experimentalForceLongPolling: true });
-                A.getRedirectResult(auth).then(r => { if (!r) return; const c = A.GoogleAuthProvider.credentialFromResult(r); if (c && c.accessToken) setDriveToken(c.accessToken, r.user.uid); }).catch(() => {});
-                A.onAuthStateChanged(auth, onUser);
-            } catch (e) { console.warn('Firebase לא נטען', e); setStatus('סנכרון לא זמין כרגע', 'err'); }
-        }
-
-        async function onUser(u) {
-            user = u;
-            updateDriveUI();
-            if (unsub) { unsub(); unsub = null; }
-            if (!u) { setStatus('התחבר לסנכרון (Google)'); return; }
-            setStatus('מסנכרן...', 'busy');
-            try {
-                await initialSync();
-                unsub = F.onSnapshot(mainRef(), snap => {
-                    if (!snap.exists() || snap.metadata.hasPendingWrites) return;
-                    const r = snap.data();
-                    if (r.by === DEVICE || applying) return;
-                    if ((r.updatedAt || 0) > localUpdated()) applyRemote(r);
-                }, err => console.warn(err));
-                setStatus('מסונכרן: ' + (u.email || ''), 'ok');
-            } catch (e) { syncError(e); }
-        }
-
-        function syncError(e) {
-            console.error('שגיאת סנכרון', e);
-            if (!navigator.onLine) { setStatus('לא מקוון - יסונכרן כשהחיבור יחזור'); return; }
-            setStatus('שגיאת סנכרון - לחץ לנסות שוב', 'err');
-            const code = (e && (e.code || e.message)) || 'unknown';
-            const hints = {
-                'permission-denied': 'אין הרשאה ב-Firestore. בדוק שה-Rules מעודכנים ופורסמו (עם /{document=**}).',
-                'unavailable': 'אין חיבור ל-Firestore. בדוק אינטרנט, חוסם פרסומות או סינון רשת.',
-                'failed-precondition': 'מסד Firestore לא נוצר או לא מוכן. בדוק ב-Firebase ← Firestore Database.',
-                'not-found': 'מסד Firestore לא נמצא. בדוק שנוצר מסד (default) ב-Firebase.',
-                'resource-exhausted': 'חרגת ממכסת Firestore החינמית.',
-                'invalid-argument': 'הנתונים גדולים מדי לשמירה בענן (מעל 1MB).',
-                'drive-403': 'אין גישה ל-Google Drive. ודא ש-Google Drive API מופעל בפרויקט ב-Google Cloud, ושאישרת את ההרשאה.',
-                'drive-404': 'לא נמצאה התיקייה או הקובץ ב-Google Drive.',
-                'drive-429': 'יותר מדי בקשות ל-Google Drive. נסה שוב בעוד רגע.'
-            };
-            toast((hints[String(code).replace('firestore/', '')] || 'הסנכרון נכשל. הנתונים נשמרו במכשיר.') + ' [' + code + ']');
-        }
-
-        async function initialSync() {
-            const snap = await F.getDoc(mainRef());
-            if (!snap.exists()) { await push(); }
-            else {
-                const r = snap.data();
-                const linked = localStorage.getItem('docflow_linked') === user.uid;
-                if (!linked) {
-                    if (appData.documents.length > 0) {
-                        const useCloud = await askConfirm('סנכרון עם הענן', 'נמצאו נתונים בענן וגם נתונים במכשיר הזה. להחליף את נתוני המכשיר בנתוני הענן? (ביטול = נתוני המכשיר יעלו לענן ויחליפו אותם)', 'השתמש בנתוני הענן');
-                        if (useCloud) await applyRemote(r); else await push();
-                    } else await applyRemote(r);
-                } else if ((r.updatedAt || 0) > localUpdated()) await applyRemote(r);
-                else if (localUpdated() > (r.updatedAt || 0)) await push();
-                else await pullMissingFiles();
-            }
-            localStorage.setItem('docflow_linked', user.uid);
-        }
-
-        // ---------- קבצים ב-Google Drive (תיקיית DocFlow, הרשאת drive.file) ----------
-        const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
-        const DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
-        const TOKEN_KEY = 'docflow_drive_token';
-        let driveWarned = false;
-
+        // ---------- אישור גישה ל-Google Drive ----------
         function driveProvider() { const p = new A.GoogleAuthProvider(); p.addScope(DRIVE_SCOPE); return p; }
         function driveToken() {
             try {
-                const t = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || 'null');
+                const t = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
                 if (t && t.exp > Date.now() && user && t.uid === user.uid) return t.token;
             } catch (e) {}
             return null;
         }
         function setDriveToken(token, uid) {
-            try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, uid, exp: Date.now() + 55 * 60 * 1000 })); } catch (e) {}
+            try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, uid, exp: Date.now() + 55 * 60 * 1000 })); } catch (e) {}
             driveWarned = false; updateDriveUI();
+            setTimeout(updateDriveUI, 55 * 60 * 1000 + 2000);
         }
-        function clearDriveToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {} updateDriveUI(); }
+        function clearDriveToken() { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} updateDriveUI(); }
+        function armAutoRefresh() {
+            if (autoArmed || autoDisabled) return;
+            autoArmed = true;
+            // חלון ההתחברות של גוגל חייב להיפתח מתוך נגיעה של המשתמש, אז מחכים לנגיעה הראשונה
+            document.addEventListener('pointerdown', () => {
+                autoArmed = false;
+                if (user && !driveToken() && !autoDisabled) window.driveConnect(true);
+            }, { once: true, capture: true });
+        }
         function updateDriveUI() {
             const b = document.getElementById('drive-btn');
-            if (b) b.classList.toggle('hidden', !user || !!driveToken());
+            const need = !!user && !driveToken();
+            if (b) b.classList.toggle('hidden', !need);
+            if (need) armAutoRefresh();
         }
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateDriveUI(); poll(); } });
+        window.addEventListener('online', () => { if (user && driveToken()) runSync(); });
+
         async function driveFetch(url, opts = {}) {
             const token = driveToken();
             if (!token) { const e = new Error('drive-not-connected'); e.code = 'drive-auth'; throw e; }
@@ -1980,6 +1927,13 @@
             if (!res.ok) { const t = await res.text().catch(() => ''); const e = new Error('Drive ' + res.status + ' ' + t.slice(0, 160)); e.code = 'drive-' + res.status; throw e; }
             return res;
         }
+        function warnDrive(msg) {
+            if (driveWarned) return;
+            driveWarned = true;
+            toast(msg || 'כדי לסנכרן, לחץ על "חבר את Google Drive" בתפריט הצדדי.');
+        }
+
+        // ---------- תיקיית DocFlow וקבצים ----------
         async function driveFolder(force) {
             const ck = 'docflow_drive_folder_' + user.uid;
             let id = force ? null : localStorage.getItem(ck);
@@ -2031,24 +1985,7 @@
             if (!id) return null;
             return await (await driveFetch(DRIVE_API + 'files/' + id + '?alt=media')).blob();
         }
-        // קבצים שסונכרנו בעבר דרך Firestore (לפני המעבר ל-Drive)
-        async function downloadLegacyFile(key) {
-            const first = await F.getDoc(fileRef(key + '__0'));
-            if (!first.exists()) return null;
-            const { n, type } = first.data();
-            const parts = [first.data().data];
-            const rest = await Promise.all(Array.from({ length: n - 1 }, (_, k) => F.getDoc(fileRef(key + '__' + (k + 1)))));
-            for (const sn of rest) { if (!sn.exists()) return null; parts.push(sn.data().data); }
-            const res = await fetch('data:' + type + ';base64,' + parts.join(''));
-            return await res.blob();
-        }
         const allKeys = () => [...new Set(appData.documents.flatMap(docFileKeys))];
-
-        function warnDrive(msg) {
-            if (driveWarned) return;
-            driveWarned = true;
-            toast(msg || 'כדי לסנכרן קבצים, לחץ על "חבר את Google Drive" בתפריט הצדדי.');
-        }
 
         async function syncFilesUp() {
             const done = getUploaded(); let pending = 0;
@@ -2071,33 +2008,158 @@
             const done = getUploaded(); let got = 0, missing = 0;
             for (const key of allKeys()) {
                 if (await getFile(key)) continue;
-                let blob = null;
+                let blob = null, fromDrive = false;
                 if (driveToken()) {
-                    try { blob = await driveDownload(key); }
+                    try { blob = await driveDownload(key); fromDrive = !!blob; }
                     catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('הורדה מ-Drive נכשלה', key, e); }
                 }
-                if (!blob) { try { blob = await downloadLegacyFile(key); } catch (e) {} }
-                if (blob) { await putFile(key, blob); done.add(key); got++; } else missing++;
+                if (!blob) blob = await downloadLegacyFile(key);
+                if (blob) { await putFile(key, blob); if (fromDrive) done.add(key); got++; } else missing++;
             }
             saveUploaded(done);
             if (got) { render(); toast('הורדו ' + got + ' קבצים מהענן.'); }
             if (missing && !driveToken()) warnDrive('חלק מהקבצים שמורים ב-Google Drive. לחץ על "חבר את Google Drive" בתפריט הצדדי כדי להוריד אותם.');
         }
 
-        // ---------- דחיפה ומשיכה ----------
+        // ---------- קובץ הנתונים ב-Drive ----------
+        async function findMeta() {
+            const q = encodeURIComponent("appProperties has { key='docflowMeta' and value='1' } and trashed=false");
+            const r = await (await driveFetch(DRIVE_API + 'files?q=' + q + '&orderBy=createdTime&fields=files(id,appProperties)&pageSize=1')).json();
+            return r.files && r.files[0] ? r.files[0] : null;
+        }
+        async function readMeta(id) { return await (await driveFetch(DRIVE_API + 'files/' + id + '?alt=media')).json(); }
+        async function writeMeta(id, payload, ts) {
+            const body = JSON.stringify(payload);
+            if (id) {
+                await driveFetch(DRIVE_UP + '/' + id + '?uploadType=media', { method: 'PATCH', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body });
+                await driveFetch(DRIVE_API + 'files/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appProperties: { docflowMeta: '1', updatedAt: String(ts) } }) });
+                return id;
+            }
+            const parent = await driveFolder();
+            const b = 'dfb' + Math.random().toString(36).slice(2);
+            const meta = { name: META_NAME, parents: [parent], mimeType: 'application/json', appProperties: { docflowMeta: '1', updatedAt: String(ts) } };
+            const multipart = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + body + '\r\n--' + b + '--';
+            const res = await driveFetch(DRIVE_UP + '?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: multipart });
+            return (await res.json()).id;
+        }
+
+        // ---------- נתונים ישנים שנשמרו ב-Firestore (מעבר חד-פעמי ל-Drive) ----------
+        async function ensureLegacy() {
+            if (F) return true;
+            try {
+                const mod = await import(BASE + 'firebase-firestore.js');
+                db = mod.initializeFirestore(fbApp, { experimentalForceLongPolling: true });
+                F = mod; return true;
+            } catch (e) { return false; }
+        }
+        async function legacyRead() {
+            try {
+                if (!(await ensureLegacy())) return null;
+                const snap = await F.getDoc(F.doc(db, 'users', user.uid, 'data', 'main'));
+                return snap.exists() ? snap.data() : null;
+            } catch (e) { return null; }
+        }
+        async function downloadLegacyFile(key) {
+            try {
+                if (!(await ensureLegacy())) return null;
+                const ref = id => F.doc(db, 'users', user.uid, 'files', id);
+                const first = await F.getDoc(ref(key + '__0'));
+                if (!first.exists()) return null;
+                const { n, type } = first.data();
+                const parts = [first.data().data];
+                const rest = await Promise.all(Array.from({ length: n - 1 }, (_, k) => F.getDoc(ref(key + '__' + (k + 1)))));
+                for (const sn of rest) { if (!sn.exists()) return null; parts.push(sn.data().data); }
+                return await (await fetch('data:' + type + ';base64,' + parts.join(''))).blob();
+            } catch (e) { return null; }
+        }
+
+        // ---------- סנכרון ----------
+        async function init() {
+            setStatus('התחבר לסנכרון (Google)');
+            try {
+                const [app, au] = await Promise.all([import(BASE + 'firebase-app.js'), import(BASE + 'firebase-auth.js')]);
+                A = au; fbApp = app.initializeApp(firebaseConfig); auth = A.getAuth(fbApp);
+                A.getRedirectResult(auth).then(r => {
+                    if (!r) return;
+                    const c = A.GoogleAuthProvider.credentialFromResult(r);
+                    if (c && c.accessToken) { user = r.user; setDriveToken(c.accessToken, r.user.uid); runSync(); }
+                }).catch(() => {});
+                A.onAuthStateChanged(auth, onUser);
+            } catch (e) { console.warn('Firebase לא נטען', e); setStatus('סנכרון לא זמין כרגע', 'err'); }
+        }
+
+        async function onUser(u) {
+            user = u; metaId = null; stopPolling(); updateDriveUI();
+            if (!u) { setStatus('התחבר לסנכרון (Google)'); return; }
+            if (!driveToken()) { setStatus('מחובר: ' + who() + ' (חבר Drive)'); return; }
+            runSync();
+        }
+        async function runSync() {
+            if (syncing || !user) return;
+            syncing = true;
+            setStatus('מסנכרן...', 'busy');
+            try {
+                await initialSync();
+                startPolling();
+                setStatus('מסונכרן: ' + who(), 'ok');
+            } catch (e) {
+                if (e && e.code === 'drive-auth') setStatus('מחובר: ' + who() + ' (חבר Drive)');
+                else syncError(e);
+            } finally { syncing = false; }
+        }
+
+        function syncError(e) {
+            console.error('שגיאת סנכרון', e);
+            if (!navigator.onLine) { setStatus('לא מקוון - יסונכרן כשהחיבור יחזור'); return; }
+            setStatus('שגיאת סנכרון - לחץ לנסות שוב', 'err');
+            const code = (e && (e.code || e.message)) || 'unknown';
+            const hints = {
+                'drive-403': 'אין גישה ל-Google Drive. ודא ש-Google Drive API מופעל בפרויקט ב-Google Cloud, ושאישרת את ההרשאה.',
+                'drive-404': 'לא נמצאה התיקייה או הקובץ ב-Google Drive.',
+                'drive-429': 'יותר מדי בקשות ל-Google Drive. נסה שוב בעוד רגע.'
+            };
+            toast((hints[String(code)] || 'הסנכרון נכשל. הנתונים נשמרו במכשיר.') + ' [' + code + ']');
+        }
+
+        async function initialSync() {
+            const m = await findMeta();
+            let remote = null, fromLegacy = false;
+            if (m) { metaId = m.id; remote = await readMeta(m.id); }
+            else { remote = await legacyRead(); fromLegacy = !!remote; }
+            const linked = localStorage.getItem('docflow_linked') === user.uid;
+            if (!remote) { await push(); }
+            else {
+                const rts = remote.updatedAt || 0, lts = localUpdated();
+                if (!linked) {
+                    if (appData.documents.length > 0 && rts !== lts) {
+                        const useCloud = await askConfirm('סנכרון עם הענן', 'נמצאו נתונים ב-Google Drive וגם נתונים במכשיר הזה. להחליף את נתוני המכשיר בנתוני הדרייב? (ביטול = נתוני המכשיר יעלו לדרייב ויחליפו אותם)', 'השתמש בנתוני הדרייב');
+                        if (useCloud) await applyRemote(remote); else await push();
+                    } else await applyRemote(remote);
+                } else if (rts > lts) await applyRemote(remote);
+                else if (lts > rts) await push();
+                else await pullMissingFiles();
+                if (fromLegacy) await push(); // יוצר את קובץ הנתונים ב-Drive
+            }
+            localStorage.setItem('docflow_linked', user.uid);
+        }
+
         async function push() {
             if (!user || applying) return;
+            if (!driveToken()) { warnDrive(); updateDriveUI(); return; }
             if (pushing) { dirty = true; return; }
             pushing = true; dirty = false;
             setStatus('מסנכרן...', 'busy');
             try {
                 await syncFilesUp();
                 const ts = Date.now();
-                await F.setDoc(mainRef(), { json: JSON.stringify(appData), updatedAt: ts, by: DEVICE });
+                if (!metaId) { const m = await findMeta(); metaId = m ? m.id : null; }
+                metaId = await writeMeta(metaId, { v: 1, updatedAt: ts, by: DEVICE, json: JSON.stringify(appData) }, ts);
                 localStorage.setItem('docflow_updated', String(ts));
-                setStatus('מסונכרן: ' + (user.email || ''), 'ok');
-            } catch (e) { syncError(e); }
-            finally { pushing = false; if (dirty) push(); }
+                setStatus('מסונכרן: ' + who(), 'ok');
+            } catch (e) {
+                if (e && e.code === 'drive-auth') setStatus('מחובר: ' + who() + ' (חבר Drive)');
+                else syncError(e);
+            } finally { pushing = false; if (dirty) push(); }
         }
         async function applyRemote(r) {
             applying = true;
@@ -2109,9 +2171,23 @@
                 localStorage.setItem('docflow_updated', String(r.updatedAt || Date.now()));
                 render();
                 await pullMissingFiles();
-                setStatus('מסונכרן: ' + (user ? user.email || '' : ''), 'ok');
+                setStatus('מסונכרן: ' + who(), 'ok');
             } catch (e) { syncError(e); }
             finally { applying = false; }
+        }
+
+        // בדיקת שינויים ממכשירים אחרים (אין עדכון בזמן אמת, בודקים כל חצי דקה כשהאפליקציה פתוחה)
+        function startPolling() { stopPolling(); pollTimer = setInterval(poll, 30000); }
+        function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+        async function poll() {
+            if (!user || !driveToken() || document.hidden || pushing || applying || syncing) return;
+            try {
+                const m = await findMeta();
+                if (!m) return;
+                metaId = m.id;
+                const ts = Number(m.appProperties && m.appProperties.updatedAt) || 0;
+                if (ts > localUpdated()) await applyRemote(await readMeta(m.id));
+            } catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('בדיקת עדכונים נכשלה', e); }
         }
 
         window.cloudPush = function () {
@@ -2119,7 +2195,7 @@
             clearTimeout(pushTimer);
             pushTimer = setTimeout(push, 1500);
         };
-        window.driveConnect = async function () {
+        window.driveConnect = async function (auto) {
             if (!user || !auth) return;
             try {
                 const p = driveProvider();
@@ -2128,12 +2204,11 @@
                 const cred = A.GoogleAuthProvider.credentialFromResult(res);
                 if (!cred || !cred.accessToken) throw new Error('no-token');
                 setDriveToken(cred.accessToken, user.uid);
-                setStatus('מסנכרן...', 'busy');
-                await pullMissingFiles();
-                await push();
-                toast('Google Drive מחובר. הקבצים נשמרים בתיקיית DocFlow.');
+                await runSync();
+                if (!auto) toast('Google Drive מחובר. הנתונים והקבצים נשמרים בתיקיית DocFlow.');
             } catch (e) {
-                if (e && e.code === 'auth/popup-closed-by-user') return;
+                if (auto) autoDisabled = true; // לא נטרד שוב בחיבור אוטומטי עד לטעינה הבאה
+                if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
                 console.error(e);
                 toast(e && e.code === 'auth/user-mismatch' ? 'בחרת חשבון גוגל אחר. בחר את החשבון שאיתו התחברת.' : 'החיבור ל-Google Drive נכשל.');
             }
@@ -2149,22 +2224,22 @@
         window.cloudToggle = async function () {
             if (!auth) { toast('Firebase עדיין נטען. נסה שוב בעוד רגע.'); return; }
             if (user) {
-                if (document.getElementById('cloud-label').textContent.includes('שגיאת')) { onUser(user); return; }
-                if (await askConfirm('התנתקות מהסנכרון', 'הנתונים יישארו במכשיר הזה, אבל לא יסונכרנו עד להתחברות מחדש.', 'התנתק')) await A.signOut(auth);
+                if (document.getElementById('cloud-label').textContent.includes('שגיאת')) { runSync(); return; }
+                if (!driveToken()) { window.driveConnect(); return; }
+                if (await askConfirm('התנתקות מהסנכרון', 'הנתונים יישארו במכשיר הזה, אבל לא יסונכרנו עד להתחברות מחדש.', 'התנתק')) { stopPolling(); clearDriveToken(); await A.signOut(auth); }
                 return;
             }
             try {
                 const res = await A.signInWithPopup(auth, driveProvider());
                 const cred = A.GoogleAuthProvider.credentialFromResult(res);
-                if (cred && cred.accessToken) { setDriveToken(cred.accessToken, res.user.uid); if (user) { await pullMissingFiles(); push(); } }
-            }
-            catch (e) {
+                user = res.user;
+                if (cred && cred.accessToken) { setDriveToken(cred.accessToken, res.user.uid); runSync(); }
+            } catch (e) {
                 if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { A.signInWithRedirect(auth, driveProvider()); }
                 else if (e && e.code === 'auth/unauthorized-domain') toast('הדומיין לא מורשה. הוסף אותו ב-Authentication ← Settings ← Authorized domains.');
                 else if (!e || e.code !== 'auth/popup-closed-by-user') { console.error(e); toast('ההתחברות נכשלה.'); }
             }
         };
-        window.addEventListener('online', () => { if (user) onUser(user); });
         init();
     })();
     </script>
