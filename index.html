@@ -151,6 +151,9 @@
             <button id="cloud-btn" onclick="cloudToggle()" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-apple-blue/10 text-apple-blue hover:bg-apple-blue/20 transition">
                 <i id="cloud-icon" class="fa-solid fa-cloud"></i><span id="cloud-label">התחבר לסנכרון (Google)</span>
             </button>
+            <button id="drive-btn" onclick="driveConnect()" class="hidden w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition">
+                <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לקבצים)</span>
+            </button>
         </div>
 
                 <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
@@ -601,7 +604,7 @@
         if (doc.fileKey) keys.add(doc.fileKey);
         return [...keys];
     }
-    async function purgeDocFiles(doc) { for (const k of docFileKeys(doc)) await delFile(k); }
+    async function purgeDocFiles(doc) { for (const k of docFileKeys(doc)) { await delFile(k); if (window.cloudDeleteFile) window.cloudDeleteFile(k); } }
     function blobToDataURL(blob) {
         return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
     }
@@ -1859,8 +1862,7 @@
             appId: "1:201947497714:web:3392f0708f82550fd27c6b"
         };
         const BASE = 'https://www.gstatic.com/firebasejs/10.14.1/';
-        const MAX_FILE = 8 * 1024 * 1024;   // קבצים גדולים מזה נשארים במכשיר בלבד
-        const CHUNK = 700000;               // תווי base64 לכל מסמך (מגבלת Firestore: 1MB)
+        const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'; // גישה רק לקבצים ולתיקיות שהאפליקציה יצרה
         const DEVICE = localStorage.getItem('docflow_device') || (() => { const d = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('docflow_device', d); return d; })();
 
         let A = null, F = null, auth = null, db = null, user = null, unsub = null;
@@ -1887,12 +1889,14 @@
                 A = au; F = fs;
                 const a = app.initializeApp(firebaseConfig);
                 auth = A.getAuth(a); db = F.initializeFirestore(a, { experimentalForceLongPolling: true });
+                A.getRedirectResult(auth).then(r => { if (!r) return; const c = A.GoogleAuthProvider.credentialFromResult(r); if (c && c.accessToken) setDriveToken(c.accessToken, r.user.uid); }).catch(() => {});
                 A.onAuthStateChanged(auth, onUser);
             } catch (e) { console.warn('Firebase לא נטען', e); setStatus('סנכרון לא זמין כרגע', 'err'); }
         }
 
         async function onUser(u) {
             user = u;
+            updateDriveUI();
             if (unsub) { unsub(); unsub = null; }
             if (!u) { setStatus('התחבר לסנכרון (Google)'); return; }
             setStatus('מסנכרן...', 'busy');
@@ -1919,7 +1923,10 @@
                 'failed-precondition': 'מסד Firestore לא נוצר או לא מוכן. בדוק ב-Firebase ← Firestore Database.',
                 'not-found': 'מסד Firestore לא נמצא. בדוק שנוצר מסד (default) ב-Firebase.',
                 'resource-exhausted': 'חרגת ממכסת Firestore החינמית.',
-                'invalid-argument': 'הנתונים גדולים מדי לשמירה בענן (מעל 1MB).'
+                'invalid-argument': 'הנתונים גדולים מדי לשמירה בענן (מעל 1MB).',
+                'drive-403': 'אין גישה ל-Google Drive. ודא ש-Google Drive API מופעל בפרויקט ב-Google Cloud, ושאישרת את ההרשאה.',
+                'drive-404': 'לא נמצאה התיקייה או הקובץ ב-Google Drive.',
+                'drive-429': 'יותר מדי בקשות ל-Google Drive. נסה שוב בעוד רגע.'
             };
             toast((hints[String(code).replace('firestore/', '')] || 'הסנכרון נכשל. הנתונים נשמרו במכשיר.') + ' [' + code + ']');
         }
@@ -1942,52 +1949,139 @@
             localStorage.setItem('docflow_linked', user.uid);
         }
 
-        // ---------- קבצים (מקוטעים למסמכי Firestore) ----------
-        async function uploadFile(key, blob) {
-            const dataUrl = await blobToDataURL(blob);
-            const comma = dataUrl.indexOf(',');
-            const b64 = dataUrl.slice(comma + 1);
-            const type = blob.type || (dataUrl.slice(5, comma).split(';')[0]) || 'application/octet-stream';
-            const n = Math.max(1, Math.ceil(b64.length / CHUNK));
-            for (let i = 0; i < n; i++) {
-                await F.setDoc(fileRef(key + '__' + i), { key, i, n, type, data: b64.slice(i * CHUNK, (i + 1) * CHUNK) });
-            }
+        // ---------- קבצים ב-Google Drive (תיקיית DocFlow, הרשאת drive.file) ----------
+        const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
+        const DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
+        const TOKEN_KEY = 'docflow_drive_token';
+        let driveWarned = false;
+
+        function driveProvider() { const p = new A.GoogleAuthProvider(); p.addScope(DRIVE_SCOPE); return p; }
+        function driveToken() {
+            try {
+                const t = JSON.parse(sessionStorage.getItem(TOKEN_KEY) || 'null');
+                if (t && t.exp > Date.now() && user && t.uid === user.uid) return t.token;
+            } catch (e) {}
+            return null;
         }
-        async function downloadFile(key) {
+        function setDriveToken(token, uid) {
+            try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, uid, exp: Date.now() + 55 * 60 * 1000 })); } catch (e) {}
+            driveWarned = false; updateDriveUI();
+        }
+        function clearDriveToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {} updateDriveUI(); }
+        function updateDriveUI() {
+            const b = document.getElementById('drive-btn');
+            if (b) b.classList.toggle('hidden', !user || !!driveToken());
+        }
+        async function driveFetch(url, opts = {}) {
+            const token = driveToken();
+            if (!token) { const e = new Error('drive-not-connected'); e.code = 'drive-auth'; throw e; }
+            const res = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: 'Bearer ' + token } });
+            if (res.status === 401) { clearDriveToken(); const e = new Error('drive-expired'); e.code = 'drive-auth'; throw e; }
+            if (!res.ok) { const t = await res.text().catch(() => ''); const e = new Error('Drive ' + res.status + ' ' + t.slice(0, 160)); e.code = 'drive-' + res.status; throw e; }
+            return res;
+        }
+        async function driveFolder(force) {
+            const ck = 'docflow_drive_folder_' + user.uid;
+            let id = force ? null : localStorage.getItem(ck);
+            if (id) return id;
+            const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and name='DocFlow' and trashed=false");
+            const r = await (await driveFetch(DRIVE_API + 'files?q=' + q + '&orderBy=createdTime&fields=files(id)&pageSize=1')).json();
+            if (r.files && r.files.length) id = r.files[0].id;
+            else {
+                const c = await (await driveFetch(DRIVE_API + 'files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'DocFlow', mimeType: 'application/vnd.google-apps.folder' }) })).json();
+                id = c.id;
+            }
+            localStorage.setItem(ck, id);
+            return id;
+        }
+        async function driveFind(key) {
+            const q = encodeURIComponent("appProperties has { key='docflowKey' and value='" + String(key).replace(/['\\]/g, '') + "' } and trashed=false");
+            const r = await (await driveFetch(DRIVE_API + 'files?q=' + q + '&fields=files(id)&pageSize=1')).json();
+            return r.files && r.files[0] ? r.files[0].id : null;
+        }
+        function nameForKey(key) {
+            for (const d of appData.documents) {
+                for (const v of (d.versions || [])) if (v.fileKey === key && v.fileName) return v.fileName;
+                if (d.fileKey === key && d.fileName) return d.fileName;
+            }
+            return key;
+        }
+        async function driveUpload(key, blob, name, retried) {
+            const parent = await driveFolder(retried);
+            const type = blob.type || 'application/octet-stream';
+            let init;
+            try {
+                init = await driveFetch(DRIVE_UP + '?uploadType=resumable&fields=id', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type },
+                    body: JSON.stringify({ name, parents: [parent], mimeType: type, appProperties: { docflowKey: key } })
+                });
+            } catch (e) {
+                if (!retried && e && e.code === 'drive-404') return driveUpload(key, blob, name, true); // התיקייה נמחקה - ניצור מחדש
+                throw e;
+            }
+            const loc = init.headers.get('Location');
+            if (!loc) throw new Error('drive-no-upload-url');
+            const up = await fetch(loc, { method: 'PUT', headers: { 'Content-Type': type }, body: blob });
+            if (!up.ok) throw new Error('Drive upload ' + up.status);
+            return (await up.json()).id;
+        }
+        async function driveDownload(key) {
+            const id = await driveFind(key);
+            if (!id) return null;
+            return await (await driveFetch(DRIVE_API + 'files/' + id + '?alt=media')).blob();
+        }
+        // קבצים שסונכרנו בעבר דרך Firestore (לפני המעבר ל-Drive)
+        async function downloadLegacyFile(key) {
             const first = await F.getDoc(fileRef(key + '__0'));
             if (!first.exists()) return null;
             const { n, type } = first.data();
             const parts = [first.data().data];
             const rest = await Promise.all(Array.from({ length: n - 1 }, (_, k) => F.getDoc(fileRef(key + '__' + (k + 1)))));
-            for (const s of rest) { if (!s.exists()) return null; parts.push(s.data().data); }
+            for (const sn of rest) { if (!sn.exists()) return null; parts.push(sn.data().data); }
             const res = await fetch('data:' + type + ';base64,' + parts.join(''));
             return await res.blob();
         }
         const allKeys = () => [...new Set(appData.documents.flatMap(docFileKeys))];
 
+        function warnDrive(msg) {
+            if (driveWarned) return;
+            driveWarned = true;
+            toast(msg || 'כדי לסנכרן קבצים, לחץ על "חבר את Google Drive" בתפריט הצדדי.');
+        }
+
         async function syncFilesUp() {
-            const done = getUploaded(); let skipped = 0;
+            const done = getUploaded(); let pending = 0;
             for (const key of allKeys()) {
                 if (done.has(key)) continue;
                 const blob = await getFile(key);
                 if (!blob) continue;
-                if (blob.size > MAX_FILE) { skipped++; continue; }
-                await uploadFile(key, blob);
-                done.add(key); saveUploaded(done);
+                if (!driveToken()) { pending++; continue; }
+                try {
+                    if (!(await driveFind(key))) await driveUpload(key, blob, nameForKey(key));
+                    done.add(key); saveUploaded(done);
+                } catch (e) {
+                    if (e && e.code === 'drive-auth') { pending++; break; }
+                    throw e;
+                }
             }
-            if (skipped) toast(skipped + ' קבצים גדולים מ-8MB לא סונכרנו ונשארו במכשיר בלבד.');
+            if (pending) warnDrive();
         }
         async function pullMissingFiles() {
-            const done = getUploaded(); let got = 0;
+            const done = getUploaded(); let got = 0, missing = 0;
             for (const key of allKeys()) {
                 if (await getFile(key)) continue;
-                try {
-                    const blob = await downloadFile(key);
-                    if (blob) { await putFile(key, blob); done.add(key); got++; }
-                } catch (e) { console.warn('הורדת קובץ נכשלה', key, e); }
+                let blob = null;
+                if (driveToken()) {
+                    try { blob = await driveDownload(key); }
+                    catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('הורדה מ-Drive נכשלה', key, e); }
+                }
+                if (!blob) { try { blob = await downloadLegacyFile(key); } catch (e) {} }
+                if (blob) { await putFile(key, blob); done.add(key); got++; } else missing++;
             }
             saveUploaded(done);
             if (got) { render(); toast('הורדו ' + got + ' קבצים מהענן.'); }
+            if (missing && !driveToken()) warnDrive('חלק מהקבצים שמורים ב-Google Drive. לחץ על "חבר את Google Drive" בתפריט הצדדי כדי להוריד אותם.');
         }
 
         // ---------- דחיפה ומשיכה ----------
@@ -2025,6 +2119,33 @@
             clearTimeout(pushTimer);
             pushTimer = setTimeout(push, 1500);
         };
+        window.driveConnect = async function () {
+            if (!user || !auth) return;
+            try {
+                const p = driveProvider();
+                if (user.email) p.setCustomParameters({ login_hint: user.email });
+                const res = await A.reauthenticateWithPopup(user, p);
+                const cred = A.GoogleAuthProvider.credentialFromResult(res);
+                if (!cred || !cred.accessToken) throw new Error('no-token');
+                setDriveToken(cred.accessToken, user.uid);
+                setStatus('מסנכרן...', 'busy');
+                await pullMissingFiles();
+                await push();
+                toast('Google Drive מחובר. הקבצים נשמרים בתיקיית DocFlow.');
+            } catch (e) {
+                if (e && e.code === 'auth/popup-closed-by-user') return;
+                console.error(e);
+                toast(e && e.code === 'auth/user-mismatch' ? 'בחרת חשבון גוגל אחר. בחר את החשבון שאיתו התחברת.' : 'החיבור ל-Google Drive נכשל.');
+            }
+        };
+        window.cloudDeleteFile = async function (key) {
+            try {
+                if (!user || !driveToken()) return;
+                const id = await driveFind(key);
+                if (id) await driveFetch(DRIVE_API + 'files/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) });
+                const done = getUploaded(); done.delete(key); saveUploaded(done);
+            } catch (e) { console.warn('מחיקה מ-Drive נכשלה', e); }
+        };
         window.cloudToggle = async function () {
             if (!auth) { toast('Firebase עדיין נטען. נסה שוב בעוד רגע.'); return; }
             if (user) {
@@ -2032,9 +2153,13 @@
                 if (await askConfirm('התנתקות מהסנכרון', 'הנתונים יישארו במכשיר הזה, אבל לא יסונכרנו עד להתחברות מחדש.', 'התנתק')) await A.signOut(auth);
                 return;
             }
-            try { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); }
+            try {
+                const res = await A.signInWithPopup(auth, driveProvider());
+                const cred = A.GoogleAuthProvider.credentialFromResult(res);
+                if (cred && cred.accessToken) { setDriveToken(cred.accessToken, res.user.uid); if (user) { await pullMissingFiles(); push(); } }
+            }
             catch (e) {
-                if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { A.signInWithRedirect(auth, new A.GoogleAuthProvider()); }
+                if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { A.signInWithRedirect(auth, driveProvider()); }
                 else if (e && e.code === 'auth/unauthorized-domain') toast('הדומיין לא מורשה. הוסף אותו ב-Authentication ← Settings ← Authorized domains.');
                 else if (!e || e.code !== 'auth/popup-closed-by-user') { console.error(e); toast('ההתחברות נכשלה.'); }
             }
