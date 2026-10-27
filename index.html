@@ -127,15 +127,21 @@
                         <div class="flex items-center gap-3"><i class="fa-solid fa-trash-can w-5 text-center text-red-500"></i> סל מחזור</div>
                         <span id="trash-count-badge" class="pill">0</span>
                     </button>
-                    <button onclick="openAddCategoryModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                        <i class="fa-solid fa-folder-plus w-5 text-center text-apple-blue"></i> הוסף קטגוריה חדשה
+                    <button onclick="toggleSettingsMenu()" id="settings-btn" aria-expanded="false" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                        <div class="flex items-center gap-3"><i class="fa-solid fa-gear w-5 text-center text-apple-blue"></i> הגדרות</div>
+                        <i id="settings-chevron" class="fa-solid fa-chevron-down text-[10px] text-apple-gray transition-transform"></i>
                     </button>
-                    <button onclick="openReorderModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                        <i class="fa-solid fa-sort w-5 text-center text-apple-blue"></i> סדר קטגוריות
-                    </button>
-                    <button onclick="openTagsModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                        <i class="fa-solid fa-tags w-5 text-center text-apple-blue"></i> ניהול תגיות
-                    </button>
+                    <div id="settings-menu" class="hidden mr-5 pr-2 border-r border-apple-border/60 dark:border-apple-darkBorder space-y-1">
+                        <button onclick="openAddCategoryModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                            <i class="fa-solid fa-folder-plus w-5 text-center text-apple-blue"></i> הוסף קטגוריה חדשה
+                        </button>
+                        <button onclick="openReorderModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                            <i class="fa-solid fa-sort w-5 text-center text-apple-blue"></i> סדר קטגוריות
+                        </button>
+                        <button onclick="openTagsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
+                            <i class="fa-solid fa-tags w-5 text-center text-apple-blue"></i> ניהול תגיות
+                        </button>
+                    </div>
                 </nav>
             </div>
             <div>
@@ -154,7 +160,7 @@
             <button id="drive-btn" onclick="driveConnect()" class="hidden w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition">
                 <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לסנכרון)</span>
             </button>
-            <p id="app-version" class="text-[10px] text-apple-gray text-center mt-2">גרסה: 24/10 · תתי-קטגוריות</p>
+            <p id="app-version" class="text-[10px] text-apple-gray text-center mt-2">גרסה: 27/10 · סדר ידני, ZIP, הגדרות</p>
         </div>
 
                 <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
@@ -218,16 +224,14 @@
             <div id="print-area" class="p-5 space-y-5 overflow-y-auto">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <div id="view-doc-badges" class="flex flex-wrap items-center gap-2"></div>
-                        <h2 id="view-doc-name" class="text-xl font-bold mt-2 break-words">שם המסמך</h2>
+                        <h2 id="view-doc-name" class="text-xl font-bold break-words">שם המסמך</h2>
                         <p id="view-doc-category-folder" class="text-xs text-apple-gray mt-1"></p>
                     </div>
                     <div id="view-doc-icon" class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-apple-blue flex items-center justify-center text-2xl shrink-0"></div>
                 </div>
                 <div id="view-doc-preview"></div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 p-4 rounded-xl border border-apple-border/40 dark:border-apple-darkBorder text-xs">
+                <div class="grid grid-cols-3 gap-4 bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 p-4 rounded-xl border border-apple-border/40 dark:border-apple-darkBorder text-xs">
                     <div><span class="text-apple-gray block">תאריך הוספה</span><strong id="view-doc-date">-</strong></div>
-                    <div><span class="text-apple-gray block">תאריך תפוגה</span><strong id="view-doc-expiry">-</strong></div>
                     <div><span class="text-apple-gray block">גודל קובץ</span><strong id="view-doc-size">-</strong></div>
                     <div><span class="text-apple-gray block">גרסה נוכחית</span><strong id="view-doc-version" class="text-apple-blue">-</strong></div>
                 </div>
@@ -371,21 +375,6 @@
                         <select id="doc-folder-select" class="inp"></select>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="lbl" for="doc-status-select">סטטוס</label>
-                        <select id="doc-status-select" class="inp">
-                            <option value="approved">מאושר</option>
-                            <option value="pending">בטיפול</option>
-                            <option value="draft">טיוטה</option>
-                            <option value="payment">לתשלום</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="lbl" for="doc-expiry-input">תאריך תפוגה (לא חובה)</label>
-                        <input type="date" id="doc-expiry-input" class="inp">
-                    </div>
-                </div>
                 <div>
                     <span class="lbl">קובץ מצורף</span>
                     <div id="drop-zone" onclick="document.getElementById('doc-file-input').click()" class="border-2 border-dashed border-apple-border dark:border-apple-darkBorder rounded-2xl p-4 text-center cursor-pointer hover:border-apple-blue transition bg-apple-lightGray/30 dark:bg-apple-darkBorder/20">
@@ -504,12 +493,6 @@
 
     const LS_KEY = 'docflow_saas_data';
     const ICONS = ['fa-folder','fa-wallet','fa-receipt','fa-scale-balanced','fa-file-contract','fa-code','fa-lightbulb','fa-user-shield','fa-briefcase','fa-house','fa-car','fa-heart-pulse','fa-graduation-cap','fa-plane','fa-building-columns','fa-camera','fa-chart-line','fa-handshake','fa-shield-halved','fa-box-archive'];
-    const STATUS = {
-        approved: { label: 'מאושר', cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
-        pending:  { label: 'בטיפול', cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-        draft:    { label: 'טיוטה', cls: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' },
-        payment:  { label: 'לתשלום', cls: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' }
-    };
 
     // =====================================================================
     //  עזרים כלליים
@@ -524,12 +507,6 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
     function formatDate(s) { if (!s) return ''; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; }
-    function daysUntil(s) {
-        if (!s) return null;
-        const [y, m, d] = s.split('-').map(Number);
-        const n = new Date();
-        return Math.round((new Date(y, m - 1, d) - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
-    }
     function formatSize(b) {
         if (b < 1024) return b + ' B';
         if (b < 1024 * 1024) return Math.round(b / 1024) + ' KB';
@@ -551,19 +528,6 @@
             case 'image': return 'fa-file-image text-purple-500';
             default: return 'fa-file-lines text-apple-blue';
         }
-    }
-    function statusBadge(s) {
-        const st = STATUS[s] || { label: 'כללי', cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' };
-        return `<span class="${st.cls} px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap">${st.label}</span>`;
-    }
-    function expiryBadge(doc) {
-        const d = daysUntil(doc.expiryDate);
-        if (d === null || d > 30) return '';
-        let txt, cls;
-        if (d < 0) { txt = 'פג תוקף'; cls = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; }
-        else if (d === 0) { txt = 'פג היום'; cls = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; }
-        else { txt = `פג בעוד ${d} ימים`; cls = 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'; }
-        return `<span class="${cls} px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap"><i class="fa-regular fa-clock ml-1"></i>${txt}</span>`;
     }
     const getCat = id => appData.categories.find(c => c.id === id);
     const getSub = (cat, id) => id && cat ? (cat.subs || []).find(x => x.id === id) : null;
@@ -649,7 +613,7 @@
     const urlCache = {};
     async function getObjectUrl(key) {
         if (urlCache[key]) return urlCache[key];
-        const blob = await getFile(key);
+        const blob = await getFileLazy(key);
         if (!blob) return null;
         return (urlCache[key] = URL.createObjectURL(blob));
     }
@@ -677,10 +641,11 @@
             const doc = {
                 ...x, title: x.title || 'ללא שם', tags: Array.isArray(x.tags) ? x.tags : [], versions: Array.isArray(x.versions) ? x.versions : [],
                 isFavorite: !!x.isFavorite, isDeleted: !!x.isDeleted, folderId: x.folderId || '', content: x.content || '',
-                status: x.status || 'approved', fileKey: x.fileKey || '', fileName: x.fileName || '', size: x.size || '', fileType: x.fileType || 'other'
+                fileKey: x.fileKey || '', fileName: x.fileName || '', size: x.size || '', fileType: x.fileType || 'other'
             };
             // מסמכים ישנים שנוצרו בלי קובץ אמיתי: ניקוי שמות קבצים ונפחים מדומים
             if (!doc.fileKey && !doc.fileUrl) { doc.fileName = ''; doc.size = ''; doc.versions = []; }
+            delete doc.status; delete doc.expiryDate; // הסטטוס ותאריך התפוגה הוסרו מהאפליקציה
             return doc;
         });
         // תגיות לפי קטגוריה: לכל קטגוריה ספריית תגיות משלה (בתוספת התגיות של המסמכים שבה)
@@ -714,7 +679,7 @@
     let appData = loadData();
 
     function saveData() {
-        try { localStorage.setItem(LS_KEY, JSON.stringify(appData)); localStorage.setItem('docflow_updated', String(Date.now())); if (window.cloudPush) window.cloudPush(); return true; }
+        try { localStorage.setItem(LS_KEY, JSON.stringify(appData)); localStorage.setItem('docflow_updated', String(Date.now())); localStorage.setItem('docflow_pending', '1'); if (window.cloudPush) window.cloudPush(); return true; }
         catch (e) { toast('שמירת הנתונים נכשלה - האחסון בדפדפן מלא. מומלץ לייצא גיבוי ולפנות מקום.'); return false; }
     }
 
@@ -747,7 +712,9 @@
     let docViewMode = localStorage.getItem('docflow_view') || 'list';
     let searchQuery = '';
     let searchTimer;
-    let listState = { sort: 'date-desc', status: 'all', sub: '', folder: '', flat: false, tag: '' };
+    const SORTS = ['manual', 'name', 'name-desc', 'date-desc', 'date-asc'];
+    let listState = { sort: (() => { try { const v = localStorage.getItem('docflow_sort'); return SORTS.includes(v) ? v : 'date-desc'; } catch (e) { return 'date-desc'; } })(), sub: '', folder: '', flat: false, tag: '' };
+    let moreOpen = false;
 
     // =====================================================================
     //  הודעות ואישורים
@@ -829,7 +796,8 @@
         currentView = viewId;
         activeCategoryId = catId;
         selectedDocIds = [];
-        listState = { sort: listState.sort, status: 'all', sub: '', folder: '', flat: false, tag: '' };
+        listState = { sort: listState.sort, sub: '', folder: '', flat: false, tag: '' };
+        moreOpen = false;
         searchQuery = ''; $('global-search').value = ''; $('mobile-search').value = '';
         closeSidebarIfMobile();
         render();
@@ -899,20 +867,21 @@
     // =====================================================================
     function renderMainDashboard() {
         const docs = activeDocs();
-        const attention = docs.filter(d => { const n = daysUntil(d.expiryDate); return n !== null && n <= 30; })
-            .sort((a, b) => daysUntil(a.expiryDate) - daysUntil(b.expiryDate));
         const recent = [...docs].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
-        const stat = (label, val, icon, color, extra = '') => `
-            <div class="card p-5 flex items-center justify-between ${extra}">
+        const stat = (label, val, icon, color, go = '') => {
+            const tag = go ? 'button' : 'div';
+            return `
+            <${tag} ${go ? `type="button" onclick="${go}"` : ''} class="card p-5 flex items-center justify-between text-right w-full ${go ? 'hover:shadow-md hover:border-apple-blue/40 transition cursor-pointer' : ''}">
                 <div><p class="text-xs font-semibold text-apple-gray">${label}</p><h3 class="text-2xl font-bold mt-1">${val}</h3></div>
                 <div class="w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-xl"><i class="fa-solid ${icon}"></i></div>
-            </div>`;
+            </${tag}>`;
+        };
         $('app-content').innerHTML = `
         <div class="space-y-8 max-w-7xl mx-auto">
             <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                 <div>
                     <h2 class="text-2xl md:text-3xl font-bold">${greeting()} 👋</h2>
-                    <p class="text-white/85 text-sm mt-1">${attention.length ? `יש ${attention.length} מסמכים שפג או עומד לפוג תוקפם.` : (appData.categories.length ? 'כל המסמכים שלך מסודרים. אין מסמכים שעומדים לפוג.' : 'ברוך הבא! כדי להתחיל, צור את הקטגוריה הראשונה שלך.')}</p>
+                    <p class="text-white/85 text-sm mt-1">${appData.categories.length ? `יש לך ${docs.length} מסמכים ב-${appData.categories.length} קטגוריות.` : 'ברוך הבא! כדי להתחיל, צור את הקטגוריה הראשונה שלך.'}</p>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <button onclick="openAddCategoryModal()" class="bg-white text-apple-dark hover:bg-white/90 px-4 py-2.5 rounded-xl text-sm font-semibold shadow-md transition flex items-center gap-2"><i class="fa-solid fa-folder-plus text-apple-blue"></i> קטגוריה חדשה</button>
@@ -921,18 +890,11 @@
             </div>
 
             ${demoBanner()}
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 ${stat('סך הכל מסמכים', docs.length, 'fa-file-lines', 'bg-blue-50 dark:bg-blue-900/20 text-apple-blue')}
                 ${stat('קטגוריות', appData.categories.length, 'fa-folder-tree', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
-                ${stat('מועדפים', docs.filter(d => d.isFavorite).length, 'fa-star', 'bg-amber-50 dark:bg-amber-900/20 text-amber-500')}
-                ${stat('דורשים תשומת לב', attention.length, 'fa-bell', attention.length ? 'bg-red-50 dark:bg-red-900/20 text-red-600' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600')}
+                ${stat('מועדפים', docs.filter(d => d.isFavorite).length, 'fa-star', 'bg-amber-50 dark:bg-amber-900/20 text-amber-500', "switchView('favorites')")}
             </div>
-
-            ${attention.length ? `
-            <div>
-                <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-amber-500 ml-2"></i>פג תוקף או עומד לפוג</h3>
-                <div class="card divide-y divide-apple-border/30 dark:divide-apple-darkBorder">${attention.slice(0, 5).map(d => renderDocRow(d, { showCat: true })).join('')}</div>
-            </div>` : ''}
 
             <div>
                 <h3 class="text-lg font-bold mb-3">נוספו לאחרונה</h3>
@@ -1046,12 +1008,24 @@
     // =====================================================================
     //  דאשבורד קטגוריה
     // =====================================================================
+    const idTime = id => { const n = parseInt(String(id || '').split('-')[1], 36); return isFinite(n) ? n : 0; };
     function sortDocs(arr) {
         const a = [...arr], s = listState.sort;
-        if (s === 'date-desc') a.sort((x, y) => (y.date || '').localeCompare(x.date || ''));
-        else if (s === 'date-asc') a.sort((x, y) => (x.date || '').localeCompare(y.date || ''));
+        const newer = (x, y) => (y.date || '').localeCompare(x.date || '') || idTime(y.id) - idTime(x.id);
+        if (s === 'manual') a.sort((x, y) => (x.order == null && y.order == null) ? newer(x, y) : x.order == null ? -1 : y.order == null ? 1 : x.order - y.order);
         else if (s === 'name') a.sort((x, y) => x.title.localeCompare(y.title, 'he'));
-        else if (s === 'expiry') a.sort((x, y) => (x.expiryDate || '9999').localeCompare(y.expiryDate || '9999'));
+        else if (s === 'name-desc') a.sort((x, y) => y.title.localeCompare(x.title, 'he'));
+        else if (s === 'date-asc') a.sort((x, y) => -newer(x, y));
+        else a.sort(newer);
+        return a;
+    }
+    // תיקיות ותתי-קטגוריות: ידני = לפי סדר המערך, תאריך = לפי זמן היצירה (נלקח מה-id)
+    function sortNamed(arr) {
+        const a = [...arr], s = listState.sort;
+        if (s === 'name') a.sort((x, y) => x.name.localeCompare(y.name, 'he'));
+        else if (s === 'name-desc') a.sort((x, y) => y.name.localeCompare(x.name, 'he'));
+        else if (s === 'date-asc') a.sort((x, y) => idTime(x.id) - idTime(y.id));
+        else if (s === 'date-desc') a.sort((x, y) => idTime(y.id) - idTime(x.id));
         return a;
     }
 
@@ -1062,7 +1036,7 @@
         let docs;
         if (listState.flat || listState.tag) docs = fsub ? all.filter(d => fsub.includes(d.folderId)) : (sb ? all.filter(d => d.subId === sb) : all);
         else docs = all.filter(d => cur ? d.folderId === cur : (!cat.folders.some(f => f.id === d.folderId) && (d.subId || '') === sb));
-        return docs.filter(d => (listState.status === 'all' || d.status === listState.status) && (!listState.tag || d.tags.includes(listState.tag)));
+        return docs.filter(d => !listState.tag || d.tags.includes(listState.tag));
     }
 
     function renderCategoryDashboard(cat) {
@@ -1071,14 +1045,54 @@
         { const cf = cat.folders.find(f => f.id === listState.folder); if (cf) listState.sub = cf.subId || ''; }
         if (listState.tag && !tagsOf(cat.id).includes(listState.tag)) listState.tag = '';
         const cur = listState.folder;
+        const curFolder = cat.folders.find(f => f.id === cur) || null;
+        const curSub = getSub(cat, listState.sub);
+        const ctx = curFolder ? 'folder' : curSub ? 'sub' : 'cat';
+        const manual = listState.sort === 'manual';
         const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
         const docs = sortDocs(categoryViewDocs(cat));
-        const subfolders = folderChildren(cat, cur).filter(f => cur || (f.subId || '') === listState.sub);
+        const subfolders = sortNamed(folderChildren(cat, cur).filter(f => cur || (f.subId || '') === listState.sub));
         const trail = [];
-        let c = cat.folders.find(f => f.id === cur), guard = 0;
+        let c = curFolder, guard = 0;
         while (c && guard++ < 50) { trail.unshift(c); c = cat.folders.find(f => f.id === c.parentId); }
         const sel = (v, val, l) => `<option value="${val}" ${v === val ? 'selected' : ''}>${l}</option>`;
-        const curSub = getSub(cat, listState.sub);
+
+        // ---- מאפייני הנושא הנוכחי (קטגוריה / תת-קטגוריה / תיקיה) ----
+        let hIcon, hIconCls, hTitle, hSubtitle, hCount;
+        if (ctx === 'folder') {
+            const ids = [curFolder.id, ...descendantFolderIds(cat, curFolder.id)];
+            hCount = catDocs.filter(d => ids.includes(d.folderId)).length;
+            hIcon = 'fa-folder'; hIconCls = 'bg-amber-50 dark:bg-amber-900/20 text-amber-500';
+            hTitle = curFolder.name;
+            hSubtitle = 'בתוך: ' + [cat.name, curSub && curSub.name, ...folderChain(cat, cur).slice(0, -1)].filter(Boolean).join(' › ');
+        } else if (ctx === 'sub') {
+            hCount = catDocs.filter(d => d.subId === curSub.id).length;
+            hIcon = 'fa-layer-group'; hIconCls = 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500';
+            hTitle = curSub.name; hSubtitle = 'תת-קטגוריה בתוך: ' + cat.name;
+        } else {
+            hCount = catDocs.length;
+            hIcon = safeIcon(cat.icon); hIconCls = 'bg-apple-blue/10 text-apple-blue';
+            hTitle = cat.name; hSubtitle = cat.description;
+        }
+        $('header-title').textContent = hTitle;
+        const menuBtn = (onclick, icon, label, cls = '') => `<button onclick="${onclick}" class="btn-soft ${cls}"><i class="fa-solid ${icon}"></i> ${label}</button>`;
+        let menu;
+        if (ctx === 'folder') menu = [
+            menuBtn(`openEditFolderModal('${cat.id}','${curFolder.id}')`, 'fa-pen-to-square', 'עריכת תיקיה'),
+            menuBtn(`downloadZip('folder','${curFolder.id}')`, 'fa-file-zipper', 'הורד תיקיה כקובץ ZIP'),
+            menuBtn(`deleteFolder('${cat.id}','${curFolder.id}')`, 'fa-trash', 'מחק תיקיה', '!text-red-600')];
+        else if (ctx === 'sub') menu = [
+            menuBtn(`openEditSubModal('${cat.id}','${curSub.id}')`, 'fa-pen-to-square', 'עריכת תת-קטגוריה'),
+            menuBtn(`downloadZip('sub','${curSub.id}')`, 'fa-file-zipper', 'הורד כקובץ ZIP'),
+            menuBtn(`deleteSub('${cat.id}','${curSub.id}')`, 'fa-trash', 'מחק תת-קטגוריה', '!text-red-600')];
+        else menu = [
+            menuBtn(`openEditCategoryModal('${cat.id}')`, 'fa-pen-to-square', 'עריכת קטגוריה'),
+            menuBtn(`toggleCategoryStar('${cat.id}')`, cat.isFavorite ? 'fa-star text-amber-500' : 'fa-star', cat.isFavorite ? 'הסר כוכב' : 'סמן בכוכב'),
+            menuBtn(`openTagsModal('${cat.id}')`, 'fa-tags', 'תגיות'),
+            menuBtn(`moveCategoryIntoCategory('${cat.id}')`, 'fa-folder-tree', 'העבר לתוך קטגוריה'),
+            menuBtn(`downloadZip('cat','${cat.id}')`, 'fa-file-zipper', 'הורד קטגוריה כקובץ ZIP'),
+            menuBtn(`deleteCategory('${cat.id}')`, 'fa-trash', 'מחק קטגוריה', '!text-red-600')];
+
         const crumbs = `<button onclick="setSubFilter('')" class="font-semibold hover:text-apple-blue ${(cur || curSub) ? '' : 'text-apple-blue'}">${esc(cat.name)}</button>` +
             (curSub ? `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setSubFilter('${curSub.id}')" class="font-semibold hover:text-apple-blue ${cur ? '' : 'text-apple-blue'}">${esc(curSub.name)}</button>` : '') +
             trail.map((f, i) => `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setFolderFilter('${f.id}')" class="font-semibold hover:text-apple-blue ${i === trail.length - 1 ? 'text-apple-blue' : ''}">${esc(f.name)}</button>`).join('');
@@ -1088,6 +1102,8 @@
                 <div class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-layer-group"></i></div>
                 <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(x.name)}</p><span class="text-[11px] text-apple-gray">${dn} מסמכים${fn ? ` · ${fn} תיקיות` : ''}</span></div>
                 <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
+                    ${manual ? orderBtns('moveSubOrder', x.id, true) : ''}
+                    <button onclick="downloadZip('sub','${x.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד כקובץ ZIP"><i class="fa-solid fa-file-zipper text-[10px]"></i></button>
                     <button onclick="openEditSubModal('${cat.id}','${x.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תת-קטגוריה"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="deleteSub('${cat.id}','${x.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תת-קטגוריה"><i class="fa-solid fa-xmark text-xs"></i></button>
                 </div></div>`;
@@ -1106,6 +1122,8 @@
                 <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-folder"></i></div>
                 <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(f.name)}</p><span class="text-[11px] text-apple-gray">${n} מסמכים${sc ? ` · ${sc} תיקיות משנה` : ''}</span></div>
                 <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
+                    ${manual ? orderBtns('moveFolderOrder', f.id, true) : ''}
+                    <button onclick="downloadZip('folder','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד תיקיה כקובץ ZIP"><i class="fa-solid fa-file-zipper text-[10px]"></i></button>
                     <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תיקיה"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תיקיה"><i class="fa-solid fa-xmark text-xs"></i></button>
                 </div>
@@ -1114,33 +1132,33 @@
 
         $('app-content').innerHTML = `
         <div class="space-y-5 max-w-7xl mx-auto">
-            <div class="card p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="w-14 h-14 rounded-2xl bg-apple-blue/10 text-apple-blue flex items-center justify-center text-2xl shrink-0"><i class="fa-solid ${safeIcon(cat.icon)}"></i></div>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h2 class="text-xl font-bold">${esc(cat.name)}</h2>
-                            <button onclick="toggleCategoryStar('${cat.id}', event)" class="text-lg transition ${cat.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="סמן קטגוריה בכוכב" title="${cat.isFavorite ? 'הסר מהמועדפים' : 'סמן בכוכב כדי שתופיע ראשונה'}"><i class="fa-${cat.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
-                            <span class="pill">${catDocs.length} מסמכים</span>
+            <div class="card p-5">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-start gap-4 min-w-0">
+                        <div class="w-14 h-14 rounded-2xl ${hIconCls} flex items-center justify-center text-2xl shrink-0"><i class="fa-solid ${hIcon}"></i></div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h2 class="text-xl font-bold break-words">${esc(hTitle)}</h2>
+                                ${ctx === 'cat' && cat.isFavorite ? '<i class="fa-solid fa-star text-amber-500" title="קטגוריה מסומנת בכוכב"></i>' : ''}
+                                <span class="pill">${hCount} מסמכים</span>
+                            </div>
+                            ${hSubtitle ? `<p class="text-xs text-apple-gray mt-1">${esc(hSubtitle)}</p>` : ''}
+                            <button id="more-btn" onclick="toggleHeaderMore()" aria-expanded="${moreOpen}" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-apple-blue hover:underline">עוד <i id="more-chevron" class="fa-solid fa-chevron-down text-[9px] transition-transform ${moreOpen ? 'rotate-180' : ''}"></i></button>
                         </div>
-                        <p class="text-xs text-apple-gray mt-1">${esc(cat.description)}</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="openAddSubModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-layer-group"></i> תת-קטגוריה חדשה</button>
+                        <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-plus"></i> תיקיה חדשה</button>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="openEditCategoryModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-pen-to-square"></i> ערוך</button>
-                    <button onclick="deleteCategory('${cat.id}')" class="btn-soft !text-red-600"><i class="fa-solid fa-trash"></i> מחק</button>
-                    <button onclick="openAddSubModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-layer-group"></i> תת-קטגוריה חדשה</button>
-                    <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-plus"></i> תיקיה חדשה</button>
-                    <button onclick="openTagsModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-tags"></i> תגיות</button>
-                    <button onclick="moveCategoryIntoCategory('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-tree"></i> העבר לתוך קטגוריה</button>
-                </div>
+                <div id="header-more" class="${moreOpen ? '' : 'hidden'}"><div class="mt-4 pt-4 border-t border-apple-border/40 dark:border-apple-darkBorder flex flex-wrap gap-2">${menu.join('')}</div></div>
             </div>
 
             <div class="flex items-center flex-wrap text-sm px-1" aria-label="מיקום נוכחי">${crumbs}</div>
 
             ${tagChips}
 
-            ${showSubs ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cat.subs.map(subCard).join('')}</div>` : ''}
+            ${showSubs ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${sortNamed(cat.subs).map(subCard).join('')}</div>` : ''}
 
             ${subfolders.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
@@ -1150,11 +1168,8 @@
                         <button onclick="setDocViewMode('list')" class="px-3 py-2 text-xs font-semibold ${docViewMode === 'list' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת רשימה"><i class="fa-solid fa-list"></i></button>
                         <button onclick="setDocViewMode('gallery')" class="px-3 py-2 text-xs font-semibold ${docViewMode === 'gallery' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת גלריה"><i class="fa-solid fa-grip"></i></button>
                     </div>
-                    <select onchange="listState.sort=this.value;render()" class="inp !w-auto !py-2 !text-xs" aria-label="מיון">
-                        ${sel(listState.sort, 'date-desc', 'החדשים ביותר')}${sel(listState.sort, 'date-asc', 'הישנים ביותר')}${sel(listState.sort, 'name', 'לפי שם (א-ת)')}${sel(listState.sort, 'expiry', 'לפי תאריך תפוגה')}
-                    </select>
-                    <select onchange="listState.status=this.value;render()" class="inp !w-auto !py-2 !text-xs" aria-label="סינון לפי סטטוס">
-                        ${sel(listState.status, 'all', 'כל הסטטוסים')}${Object.entries(STATUS).map(([k, v]) => sel(listState.status, k, v.label)).join('')}
+                    <select onchange="setSort(this.value)" class="inp !w-auto !py-2 !text-xs" aria-label="סדר התיקיות והמסמכים">
+                        ${sel(listState.sort, 'manual', 'סדר ידני (אני מסדר)')}${sel(listState.sort, 'name', 'שם (א-ת)')}${sel(listState.sort, 'name-desc', 'שם (ת-א)')}${sel(listState.sort, 'date-desc', 'תאריך (מהחדש לישן)')}${sel(listState.sort, 'date-asc', 'תאריך (מהישן לחדש)')}
                     </select>
                     <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="listState.flat=this.checked;selectedDocIds=[];render()" class="rounded"> הצג גם מתיקיות משנה</label>
                 </div>
@@ -1168,19 +1183,21 @@
                     <button onclick="openAddDocModal('${cat.id}')" class="btn-primary !text-xs"><i class="fa-solid fa-plus text-[10px]"></i> מסמך חדש</button>
                 </div>
             </div>
+            ${manual ? '<p class="text-[11px] text-apple-gray px-1"><i class="fa-solid fa-arrows-up-down ml-1"></i>סדר ידני: השתמש בחצים כדי להזיז תיקיות ומסמכים. כדי למיין לפי שם או תאריך, בחר סדר אחר ברשימה.</p>' : ''}
 
             ${docs.length === 0
                 ? ((subfolders.length || showSubs) && !listState.flat && !listState.tag
                     ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה או ללחוץ על "מסמך חדש".</p>`
                     : `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "מסמך חדש" כדי להתחיל.'}</div>`)
-                : docViewMode === 'list' ? renderDocsTable(docs, cat) : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${docs.map(d => renderDocGalleryCard(d, false)).join('')}</div>`}
+                : docViewMode === 'list' ? renderDocsTable(docs, cat) : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${docs.map(d => renderDocGalleryCard(d, false, true)).join('')}</div>`}
         </div>`;
         syncSelectionUI();
     }
 
     function setDocViewMode(m) { docViewMode = m; try { localStorage.setItem('docflow_view', m); } catch (e) {} render(); }
-    function setSubFilter(id) { listState.sub = id; listState.folder = ''; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
+    function setSubFilter(id) { moreOpen = false; listState.sub = id; listState.folder = ''; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
     function setFolderFilter(id) {
+        moreOpen = false;
         listState.folder = id;
         if (id) { const c = getCat(activeCategoryId), f = c && c.folders.find(x => x.id === id); if (f) listState.sub = f.subId || ''; }
         selectedDocIds = []; render(); $('app-content').scrollTop = 0;
@@ -1199,7 +1216,6 @@
                         <th class="py-3 px-2 w-8"></th>
                         <th class="py-3 px-4">שם המסמך</th>
                         <th class="py-3 px-4">תיקיה</th>
-                        <th class="py-3 px-4">סטטוס</th>
                         <th class="py-3 px-4">גודל וסוג</th>
                         <th class="py-3 px-4 text-left">פעולות</th>
                     </tr>
@@ -1217,10 +1233,10 @@
                                 </div>
                             </td>
                             <td class="py-3 px-4 text-xs text-apple-gray font-medium">${esc(folderLabel(cat, doc))}</td>
-                            <td class="py-3 px-4"><div class="flex flex-col items-start gap-1">${statusBadge(doc.status)}${expiryBadge(doc)}</div></td>
-                            <td class="py-3 px-4 text-xs text-apple-gray"><div>${esc(doc.size) || '—'}</div>${doc.fileName ? `<span class="uppercase text-[10px] font-bold text-apple-blue">${esc(doc.fileType)}</span>` : 'גרור קובץ לכאן או לחץ לבחירה'}</td>
+                            <td class="py-3 px-4 text-xs text-apple-gray"><div>${esc(doc.size) || '—'}</div>${doc.fileName ? `<span class="uppercase text-[10px] font-bold text-apple-blue">${esc(doc.fileType)}</span>` : ''}</td>
                             <td class="py-3 px-4 text-left" onclick="event.stopPropagation()">
                                 <div class="flex items-center justify-end gap-1">
+                                    ${listState.sort === 'manual' ? orderBtns('moveDocOrder', doc.id) : ''}
                                     ${doc.fileKey ? `<button onclick="downloadDoc('${doc.id}')" class="icon-btn" aria-label="הורד קובץ" title="הורד"><i class="fa-solid fa-download text-xs"></i></button>` : ''}
                                     <button onclick="openEditDocModal('${doc.id}')" class="icon-btn" aria-label="ערוך" title="ערוך"><i class="fa-solid fa-pen text-xs"></i></button>
                                     <button onclick="deleteDoc('${doc.id}')" class="icon-btn hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-900/20" aria-label="מחק" title="מחק"><i class="fa-solid fa-trash text-xs"></i></button>
@@ -1233,7 +1249,7 @@
             </div>
         </div>
         <div class="card divide-y divide-apple-border/30 dark:divide-apple-darkBorder md:hidden">
-            ${docs.map(d => renderDocRow(d, { selectable: true })).join('')}
+            ${docs.map(d => renderDocRow(d, { selectable: true, reorder: true })).join('')}
         </div>`;
     }
 
@@ -1246,13 +1262,13 @@
             <div class="flex-1 min-w-0">
                 <p class="font-semibold text-sm truncate">${esc(doc.title)}</p>
                 <p class="text-[11px] text-apple-gray truncate">${opts.showCat && cat ? esc(cat.name) + ' › ' : ''}${esc(folderLabel(cat, doc))}</p>
-                <div class="flex flex-wrap items-center gap-1.5 mt-1">${statusBadge(doc.status)}${expiryBadge(doc)}</div>
             </div>
+            ${opts.reorder && listState.sort === 'manual' ? `<span class="flex shrink-0" onclick="event.stopPropagation()">${orderBtns('moveDocOrder', doc.id)}</span>` : ''}
             <button onclick="toggleFavorite('${doc.id}', event)" class="text-base p-2 transition ${doc.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="מועדף"><i class="fa-${doc.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
         </div>`;
     }
 
-    function renderDocGalleryCard(doc, showCat = true) {
+    function renderDocGalleryCard(doc, showCat = true, reorder = false) {
         const cat = getCat(doc.categoryId), fol = folderOf(cat, doc);
         const preview = (doc.fileType === 'image' && doc.fileKey)
             ? `<img data-file-key="${esc(doc.fileKey)}" alt="${esc(doc.title)}" class="w-full h-40 object-cover rounded-xl mb-3 bg-apple-lightGray dark:bg-apple-darkBorder">`
@@ -1271,13 +1287,13 @@
                 <h4 class="font-bold text-base line-clamp-1">${esc(doc.title)}</h4>
                 <p class="text-xs text-apple-gray mt-1 line-clamp-2">${esc(doc.content || doc.fileName)}</p>
                 <div class="flex flex-wrap items-center gap-1.5 mt-3">
-                    ${statusBadge(doc.status)}${expiryBadge(doc)}
                     ${doc.tags.slice(0, 3).map(t => `<span class="bg-apple-lightGray dark:bg-apple-darkBorder text-[10px] px-2 py-0.5 rounded-md font-medium">${esc(t)}</span>`).join('')}
                 </div>
             </div>
             <div class="mt-4 pt-3 border-t border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between text-xs" onclick="event.stopPropagation()">
                 <span class="text-apple-gray font-medium">${esc(doc.size) || '—'}</span>
                 <div class="flex items-center gap-1">
+                    ${reorder && listState.sort === 'manual' ? orderBtns('moveDocOrder', doc.id, true) : ''}
                     ${doc.fileKey ? `<button onclick="downloadDoc('${doc.id}')" class="icon-btn" aria-label="הורד קובץ"><i class="fa-solid fa-download"></i></button>` : ''}
                     <button onclick="openEditDocModal('${doc.id}')" class="icon-btn" aria-label="ערוך"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="deleteDoc('${doc.id}')" class="icon-btn hover:!text-red-600" aria-label="מחק"><i class="fa-solid fa-trash"></i></button>
@@ -1334,14 +1350,10 @@
         if (!doc) return;
         activeDocId = docId;
         const cat = getCat(doc.categoryId), fol = folderOf(cat, doc);
-        $('view-doc-badges').innerHTML = statusBadge(doc.status) + expiryBadge(doc);
         $('view-doc-name').textContent = doc.title;
         $('view-doc-category-folder').textContent = `${cat ? cat.name : ''} › ${folderLabel(cat, doc)}`;
         $('view-doc-icon').innerHTML = `<i class="fa-solid ${getFileIcon(doc.fileType)}"></i>`;
         $('view-doc-date').textContent = formatDate(doc.date) || '-';
-        $('view-doc-expiry').textContent = doc.expiryDate ? formatDate(doc.expiryDate) : 'ללא תפוגה';
-        const d = daysUntil(doc.expiryDate);
-        $('view-doc-expiry').className = d !== null && d < 0 ? 'text-red-600' : d !== null && d <= 30 ? 'text-amber-600' : '';
         $('view-doc-size').textContent = doc.size || '-';
         $('view-doc-version').textContent = doc.versions.length ? doc.versions[doc.versions.length - 1].version : '-';
         $('view-doc-content').textContent = doc.content || 'אין הערות.';
@@ -1367,8 +1379,8 @@
     function editFromView() { const id = activeDocId; closeDocViewModal(); if (id) openEditDocModal(id); }
 
     async function downloadFile(key, name) {
-        const blob = await getFile(key);
-        if (!blob) { toast('הקובץ לא נמצא באחסון של הדפדפן.'); return; }
+        const blob = await getFileLazy(key);
+        if (!blob) { toast(driveHint()); return; }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = name || 'file';
@@ -1383,7 +1395,7 @@
         if (!d || !d.fileKey) return;
         const w = window.open('', '_blank');
         const url = await getObjectUrl(d.fileKey);
-        if (!url) { if (w) w.close(); toast('הקובץ לא נמצא באחסון של הדפדפן.'); return; }
+        if (!url) { if (w) w.close(); toast(driveHint()); return; }
         if (w) w.location.href = url; else toast('הדפדפן חסם את פתיחת החלון. אפשר להשתמש בהורדה.');
     }
 
@@ -1445,7 +1457,7 @@
         try {
             const files = {};
             for (const d of appData.documents) for (const k of docFileKeys(d)) {
-                const blob = await getFile(k);
+                const blob = await getFileLazy(k);
                 if (blob) files[k] = await blobToDataURL(blob);
             }
             const payload = { app: 'docflow', version: 2, exportedAt: new Date().toISOString(), data: appData, files };
@@ -2019,7 +2031,6 @@
         $('doc-modal-title').textContent = 'מסמך חדש';
         setDocModalMode(true);
         $('doc-edit-id').value = ''; $('doc-title-input').value = ''; $('doc-file-input').value = '';
-        $('doc-status-select').value = 'approved'; $('doc-expiry-input').value = '';
         setDocFormTags([]); $('doc-content-input').value = '';
         resetDropText();
         $('doc-modal').classList.remove('hidden');
@@ -2035,8 +2046,6 @@
         $('doc-cat-select').value = doc.categoryId;
         updateFolderDropdownForDoc(doc.categoryId, doc.subId || '');
         $('doc-folder-select').value = doc.folderId || '';
-        $('doc-status-select').value = doc.status || 'approved';
-        $('doc-expiry-input').value = doc.expiryDate || '';
         setDocFormTags(doc.tags);
         $('doc-content-input').value = doc.content || '';
         $('drop-zone-text').textContent = doc.fileName ? `קובץ נוכחי: ${doc.fileName} (בחירת קובץ חדש תוסיף גרסה)` : 'גרור קובץ לכאן או לחץ לבחירה';
@@ -2057,8 +2066,6 @@
             categoryId: $('doc-cat-select').value,
             folderId: $('doc-folder-select').value,
             subId: $('doc-sub-select').value,
-            status: $('doc-status-select').value,
-            expiryDate: $('doc-expiry-input').value,
             tags: [...new Set(docFormTags)],
             content: $('doc-content-input').value.trim()
         };
@@ -2102,6 +2109,161 @@
             toast('שמירת הקובץ נכשלה. ייתכן שהאחסון בדפדפן מלא או חסום (גלישה פרטית).');
         } finally { btn.disabled = false; btn.textContent = 'שמור מסמך'; }
     }
+
+    // =====================================================================
+    //  הגדרות בתפריט, "עוד" בכותרת, מיון וסדר ידני
+    // =====================================================================
+    function toggleSettingsMenu() {
+        const m = $('settings-menu'), open = m.classList.toggle('hidden') === false;
+        $('settings-chevron').classList.toggle('rotate-180', open);
+        $('settings-btn').setAttribute('aria-expanded', String(open));
+    }
+    function toggleHeaderMore() {
+        const p = $('header-more');
+        if (!p) return;
+        moreOpen = p.classList.toggle('hidden') === false;
+        $('more-chevron').classList.toggle('rotate-180', moreOpen);
+        $('more-btn').setAttribute('aria-expanded', String(moreOpen));
+    }
+    function setSort(v) {
+        if (!SORTS.includes(v)) return;
+        listState.sort = v;
+        try { localStorage.setItem('docflow_sort', v); } catch (e) {}
+        render();
+    }
+    const orderBtns = (fn, id, horizontal = false) => listState.sort !== 'manual' ? '' :
+        `<button onclick="${fn}('${id}',-1)" class="icon-btn !w-7 !h-7" aria-label="הזז קדימה"><i class="fa-solid fa-chevron-${horizontal ? 'right' : 'up'} text-[10px]"></i></button>` +
+        `<button onclick="${fn}('${id}',1)" class="icon-btn !w-7 !h-7" aria-label="הזז אחורה"><i class="fa-solid fa-chevron-${horizontal ? 'left' : 'down'} text-[10px]"></i></button>`;
+    function swapInArray(arr, a, b) { const i = arr.indexOf(a), j = arr.indexOf(b); if (i < 0 || j < 0) return; [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    function moveFolderOrder(folId, dir) {
+        const cat = getCat(activeCategoryId), f = cat && cat.folders.find(x => x.id === folId);
+        if (!f) return;
+        const sibs = cat.folders.filter(x => (x.parentId || '') === (f.parentId || '') && (x.subId || '') === (f.subId || ''));
+        const o = sibs[sibs.indexOf(f) + dir];
+        if (!o) return;
+        swapInArray(cat.folders, f, o); saveData(); render();
+    }
+    function moveSubOrder(subId, dir) {
+        const cat = getCat(activeCategoryId), subs = cat && cat.subs, s = subs && subs.find(x => x.id === subId);
+        if (!s) return;
+        const o = subs[subs.indexOf(s) + dir];
+        if (!o) return;
+        swapInArray(subs, s, o); saveData(); render();
+    }
+    function moveDocOrder(docId, dir) {
+        const cat = getCat(activeCategoryId);
+        if (!cat) return;
+        const list = sortDocs(categoryViewDocs(cat));
+        const i = list.findIndex(d => d.id === docId), o = list[i + dir];
+        if (i < 0 || !o) return;
+        list.forEach((d, k) => { d.order = k; });
+        const t = list[i].order; list[i].order = o.order; o.order = t;
+        saveData(); render();
+    }
+
+    // =====================================================================
+    //  צפייה בקבצים: טוענים מהדרייב רק כשפותחים או מורידים (בלי לכתוב לדרייב)
+    // =====================================================================
+    async function getFileLazy(key) {
+        let blob = await getFile(key);
+        if (blob || !key) return blob;
+        if (window.cloudFetchFile) {
+            try { blob = await window.cloudFetchFile(key); } catch (e) { blob = null; }
+            if (blob) { try { await putFile(key, blob); } catch (e) {} }
+        }
+        return blob || null;
+    }
+    const driveHint = () => 'הקובץ לא נמצא במכשיר הזה. התחבר לסנכרון וחבר את Google Drive (בתפריט הצדדי) כדי לצפות בקבצים השמורים שם.';
+
+    // =====================================================================
+    //  הורדת קטגוריה / תת-קטגוריה / תיקיה כקובץ ZIP (כולל המסמכים)
+    // =====================================================================
+    const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+    function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+    async function buildZip(entries) {
+        const enc = new TextEncoder(), parts = [], central = [];
+        let offset = 0, cdSize = 0;
+        const now = new Date();
+        const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+        const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+        for (const e of entries) {
+            const name = enc.encode(e.name), size = e.blob.size;
+            if (size >= 0xFFFFFFFF) throw new Error('file-too-large');
+            const crc = crc32(new Uint8Array(await e.blob.arrayBuffer()));
+            const lh = new DataView(new ArrayBuffer(30));
+            lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+            lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true);
+            lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+            parts.push(lh.buffer, name, e.blob);
+            const ch = new DataView(new ArrayBuffer(46));
+            ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+            ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true);
+            ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+            ch.setUint32(42, offset, true);
+            central.push(ch.buffer, name);
+            cdSize += 46 + name.length;
+            offset += 30 + name.length + size;
+        }
+        const end = new DataView(new ArrayBuffer(22));
+        end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+        end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+        return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
+    }
+    const zipSafe = s => (String(s || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/^\.+/, '').trim().slice(0, 80)) || 'ללא שם';
+    function folderChain(cat, folId) {
+        const names = [];
+        let cur = cat.folders.find(f => f.id === folId), g = 0;
+        while (cur && g++ < 50) { names.unshift(cur.name); cur = cat.folders.find(f => f.id === cur.parentId); }
+        return names;
+    }
+    function zipScope(kind, id) {
+        const cat = kind === 'cat' ? getCat(id) : getCat(activeCategoryId);
+        if (!cat) return null;
+        if (kind === 'cat') return { name: cat.name, docs: activeDocs().filter(d => d.categoryId === cat.id),
+            rel: d => [(getSub(cat, d.subId) || {}).name, ...folderChain(cat, d.folderId)].filter(Boolean) };
+        if (kind === 'sub') { const sb = getSub(cat, id); if (!sb) return null;
+            return { name: sb.name, docs: activeDocs().filter(d => d.categoryId === cat.id && d.subId === id), rel: d => folderChain(cat, d.folderId) }; }
+        const f = cat.folders.find(x => x.id === id);
+        if (!f) return null;
+        const ids = [id, ...descendantFolderIds(cat, id)], base = folderChain(cat, id).length;
+        return { name: f.name, docs: activeDocs().filter(d => d.categoryId === cat.id && ids.includes(d.folderId)), rel: d => folderChain(cat, d.folderId).slice(base) };
+    }
+    let zipBusy = false;
+    async function downloadZip(kind, id) {
+        if (zipBusy) return toast('כבר מכין קובץ ZIP...');
+        const sc = zipScope(kind, id);
+        if (!sc) return;
+        const withFile = sc.docs.filter(d => d.fileKey);
+        if (!withFile.length) return toast('אין כאן מסמכים עם קבצים מצורפים להורדה.');
+        zipBusy = true;
+        try {
+            const entries = [], used = new Set();
+            let missing = 0;
+            for (let i = 0; i < withFile.length; i++) {
+                const d = withFile[i];
+                toast(`מכין קובץ ZIP... ${i + 1}/${withFile.length}`);
+                const blob = await getFileLazy(d.fileKey);
+                if (!blob) { missing++; continue; }
+                const dir = sc.rel(d).map(zipSafe).join('/') + (sc.rel(d).length ? '/' : '');
+                const fname = zipSafe(d.fileName || d.title), dot = fname.lastIndexOf('.');
+                const stem = dot > 0 ? fname.slice(0, dot) : fname, ext = dot > 0 ? fname.slice(dot) : '';
+                let path = dir + fname, k = 2;
+                while (used.has(path.toLowerCase())) path = `${dir}${stem} (${k++})${ext}`;
+                used.add(path.toLowerCase());
+                entries.push({ name: path, blob });
+            }
+            if (!entries.length) { toast(driveHint()); return; }
+            const zip = await buildZip(entries);
+            const url = URL.createObjectURL(zip);
+            const a = document.createElement('a');
+            a.href = url; a.download = zipSafe(sc.name) + '.zip';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            const noFile = sc.docs.length - withFile.length;
+            toast(`הורדו ${entries.length} קבצים בקובץ ZIP` + (missing ? `, ${missing} לא נמצאו` : '') + (noFile ? `, ${noFile} מסמכים בלי קובץ לא נכללו` : ''));
+        } catch (err) { console.error(err); toast('יצירת קובץ ה-ZIP נכשלה.'); }
+        finally { zipBusy = false; }
+    }
     </script>
     <script>
     // =====================================================================
@@ -2121,6 +2283,7 @@
         const DRIVE_API = 'https://www.googleapis.com/drive/v3/';
         const DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
         const TOKEN_KEY = 'docflow_drive_token';
+        const PENDING = 'docflow_pending'; // 1 = יש שינויים שנעשו במכשיר הזה ועדיין לא עלו לדרייב
         const META_NAME = 'docflow-data.json';
         const DEVICE = localStorage.getItem('docflow_device') || (() => { const d = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('docflow_device', d); return d; })();
 
@@ -2259,22 +2422,6 @@
             }
             if (pending) warnDrive();
         }
-        async function pullMissingFiles() {
-            const done = getUploaded(); let got = 0, missing = 0;
-            for (const key of allKeys()) {
-                if (await getFile(key)) continue;
-                let blob = null, fromDrive = false;
-                if (driveToken()) {
-                    try { blob = await driveDownload(key); fromDrive = !!blob; }
-                    catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('הורדה מ-Drive נכשלה', key, e); }
-                }
-                if (!blob) blob = await downloadLegacyFile(key);
-                if (blob) { await putFile(key, blob); if (fromDrive) done.add(key); got++; } else missing++;
-            }
-            saveUploaded(done);
-            if (got) { render(); toast('הורדו ' + got + ' קבצים מהענן.'); }
-            if (missing && !driveToken()) warnDrive('חלק מהקבצים שמורים ב-Google Drive. לחץ על "חבר את Google Drive" בתפריט הצדדי כדי להוריד אותם.');
-        }
 
         // ---------- קובץ הנתונים ב-Drive ----------
         async function findMeta() {
@@ -2382,19 +2529,24 @@
             if (m) { metaId = m.id; remote = await readMeta(m.id); }
             else { remote = await legacyRead(); fromLegacy = !!remote; }
             const linked = localStorage.getItem('docflow_linked') === user.uid;
-            if (!remote) { await push(); }
-            else {
-                const rts = remote.updatedAt || 0, lts = localUpdated();
-                if (!linked) {
-                    if (appData.documents.length > 0 && rts !== lts) {
-                        const useCloud = await askConfirm('סנכרון עם הענן', 'נמצאו נתונים ב-Google Drive וגם נתונים במכשיר הזה. להחליף את נתוני המכשיר בנתוני הדרייב? (ביטול = נתוני המכשיר יעלו לדרייב ויחליפו אותם)', 'השתמש בנתוני הדרייב');
-                        if (useCloud) await applyRemote(remote); else await push();
-                    } else await applyRemote(remote);
-                } else if (rts > lts) await applyRemote(remote);
-                else if (lts > rts) await push();
-                else await pullMissingFiles();
-                if (fromLegacy) await push(); // יוצר את קובץ הנתונים ב-Drive
-            }
+            const rts = remote ? (remote.updatedAt || 0) : 0, lts = localUpdated();
+            // כניסה לאפליקציה = קריאה בלבד. כותבים לדרייב רק אם המשתמש ביצע שינוי שעדיין לא עלה.
+            if (localStorage.getItem(PENDING) === null) localStorage.setItem(PENDING, lts > rts ? '1' : '0');
+            const pending = localStorage.getItem(PENDING) === '1';
+            if (!remote) {
+                if (pending || appData.documents.length || appData.categories.length) await push(); // העלאה ראשונה של נתונים קיימים
+            } else if (!linked) {
+                if (appData.documents.length > 0 && rts !== lts) {
+                    const useCloud = await askConfirm('סנכרון עם הענן', 'נמצאו נתונים ב-Google Drive וגם נתונים במכשיר הזה. להחליף את נתוני המכשיר בנתוני הדרייב? (ביטול = נתוני המכשיר יעלו לדרייב ויחליפו אותם)', 'השתמש בנתוני הדרייב');
+                    if (useCloud) await applyRemote(remote); else await push();
+                } else await applyRemote(remote);
+            } else if (pending) {
+                if (rts > lts) {
+                    const useCloud = await askConfirm('שינויים שלא סונכרנו', 'במכשיר הזה יש שינויים שעדיין לא עלו לדרייב, ובדרייב יש גרסה חדשה יותר ממכשיר אחר. להחליף את נתוני המכשיר בנתוני הדרייב? (ביטול = השינויים של המכשיר יעלו לדרייב ויחליפו אותם)', 'השתמש בנתוני הדרייב');
+                    if (useCloud) await applyRemote(remote); else await push();
+                } else await push();
+            } else if (rts > lts) await applyRemote(remote); // יש גרסה חדשה בדרייב: מציגים אותה, בלי לכתוב כלום
+            if (fromLegacy) await push(); // מעבר חד-פעמי מ-Firestore: יוצר את קובץ הנתונים ב-Drive
             localStorage.setItem('docflow_linked', user.uid);
         }
 
@@ -2410,6 +2562,7 @@
                 if (!metaId) { const m = await findMeta(); metaId = m ? m.id : null; }
                 metaId = await writeMeta(metaId, { v: 1, updatedAt: ts, by: DEVICE, json: JSON.stringify(appData) }, ts);
                 localStorage.setItem('docflow_updated', String(ts));
+                if (!dirty) localStorage.setItem(PENDING, '0');
                 setStatus('מסונכרן: ' + who(), 'ok');
             } catch (e) {
                 if (e && e.code === 'drive-auth') setStatus('מחובר: ' + who() + ' (חבר Drive)');
@@ -2424,8 +2577,8 @@
                 appData = normalize(d);
                 localStorage.setItem(LS_KEY, JSON.stringify(appData));
                 localStorage.setItem('docflow_updated', String(r.updatedAt || Date.now()));
+                localStorage.setItem(PENDING, '0');
                 render();
-                await pullMissingFiles();
                 setStatus('מסונכרן: ' + who(), 'ok');
             } catch (e) { syncError(e); }
             finally { applying = false; }
@@ -2441,7 +2594,7 @@
                 if (!m) return;
                 metaId = m.id;
                 const ts = Number(m.appProperties && m.appProperties.updatedAt) || 0;
-                if (ts > localUpdated()) await applyRemote(await readMeta(m.id));
+                if (ts > localUpdated() && localStorage.getItem(PENDING) !== '1') await applyRemote(await readMeta(m.id));
             } catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('בדיקת עדכונים נכשלה', e); }
         }
 
@@ -2475,6 +2628,18 @@
                 if (id) await driveFetch(DRIVE_API + 'files/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) });
                 const done = getUploaded(); done.delete(key); saveUploaded(done);
             } catch (e) { console.warn('מחיקה מ-Drive נכשלה', e); }
+        };
+        // טעינת קובץ מ-Drive רק כשצופים בו או מורידים אותו (לא מורידים הכול בכניסה)
+        window.cloudFetchFile = async function (key) {
+            if (!user) return null;
+            let blob = null, fromDrive = false;
+            if (driveToken()) {
+                try { blob = await driveDownload(key); fromDrive = !!blob; }
+                catch (e) { if (!(e && e.code === 'drive-auth')) console.warn('הורדה מ-Drive נכשלה', key, e); }
+            }
+            if (!blob) blob = await downloadLegacyFile(key);
+            if (blob && fromDrive) { const done = getUploaded(); done.add(key); saveUploaded(done); }
+            return blob;
         };
         window.cloudToggle = async function () {
             if (!auth) { toast('Firebase עדיין נטען. נסה שוב בעוד רגע.'); return; }
