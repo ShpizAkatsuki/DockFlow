@@ -160,7 +160,7 @@
             <button id="drive-btn" onclick="driveConnect()" class="hidden w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition">
                 <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לסנכרון)</span>
             </button>
-            <p id="app-version" class="text-[10px] text-apple-gray text-center mt-2">גרסה: 27/10 · סדר ידני, ZIP, הגדרות</p>
+            <p id="app-version" class="text-[10px] text-apple-gray text-center mt-2">גרסה: 28/10 · ריבועים, העלאה מהירה</p>
         </div>
 
                 <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
@@ -216,6 +216,8 @@
             <div class="px-5 py-3 border-b border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between bg-apple-lightGray/30 dark:bg-apple-darkBorder/20 shrink-0 no-print">
                 <h3 class="font-bold text-base">פרטי מסמך</h3>
                 <div class="flex items-center gap-1">
+                    <button onclick="toggleFavoriteFromView()" id="view-doc-star" class="icon-btn" aria-label="מועדף" title="מועדף"><i class="fa-regular fa-star text-sm"></i></button>
+                    <button onclick="deleteFromView()" class="icon-btn hover:!text-red-600" aria-label="מחק מסמך" title="מחק"><i class="fa-solid fa-trash text-sm"></i></button>
                     <button onclick="editFromView()" class="icon-btn" aria-label="ערוך מסמך" title="ערוך"><i class="fa-solid fa-pen text-sm"></i></button>
                     <button onclick="window.print()" class="icon-btn" aria-label="הדפס" title="הדפס"><i class="fa-solid fa-print text-sm"></i></button>
                     <button onclick="closeDocViewModal()" class="icon-btn" aria-label="סגור"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -709,11 +711,11 @@
     let activeDocId = null;
     let currentView = 'main-dashboard';
     let activeCategoryId = null;
-    let docViewMode = localStorage.getItem('docflow_view') || 'list';
+    let docViewMode = (() => { const v = localStorage.getItem('docflow_view'); return v === 'tiles' || v === 'gallery' ? 'tiles' : 'list'; })();
     let searchQuery = '';
     let searchTimer;
     const SORTS = ['manual', 'name', 'name-desc', 'date-desc', 'date-asc'];
-    let listState = { sort: (() => { try { const v = localStorage.getItem('docflow_sort'); return SORTS.includes(v) ? v : 'date-desc'; } catch (e) { return 'date-desc'; } })(), sub: '', folder: '', flat: false, tag: '' };
+    let listState = { sort: (() => { try { const v = localStorage.getItem('docflow_sort'); return SORTS.includes(v) ? v : 'date-desc'; } catch (e) { return 'date-desc'; } })(), sub: '', folder: '', flat: (() => { try { return localStorage.getItem('docflow_flat') !== '0'; } catch (e) { return true; } })(), tag: '' };
     let moreOpen = false;
 
     // =====================================================================
@@ -785,6 +787,11 @@
         applyThemeIcon();
         buildIconPicker();
         initDragAndDrop();
+        try { // כניסה ישר לקטגוריה האחרונה (או לקטגוריה היחידה): חוסך לחיצה
+            const lc = localStorage.getItem('docflow_last_cat');
+            const id = getCat(lc) ? lc : (appData.categories.length === 1 ? appData.categories[0].id : null);
+            if (id) { currentView = 'category'; activeCategoryId = id; }
+        } catch (e) {}
         render();
         migrateFiles();
     });
@@ -796,8 +803,9 @@
         currentView = viewId;
         activeCategoryId = catId;
         selectedDocIds = [];
-        listState = { sort: listState.sort, sub: '', folder: '', flat: false, tag: '' };
+        listState = { sort: listState.sort, sub: '', folder: '', flat: listState.flat, tag: '' };
         moreOpen = false;
+        try { if (viewId === 'category' && catId) localStorage.setItem('docflow_last_cat', catId); else localStorage.removeItem('docflow_last_cat'); } catch (e) {}
         searchQuery = ''; $('global-search').value = ''; $('mobile-search').value = '';
         closeSidebarIfMobile();
         render();
@@ -1049,6 +1057,7 @@
         const curSub = getSub(cat, listState.sub);
         const ctx = curFolder ? 'folder' : curSub ? 'sub' : 'cat';
         const manual = listState.sort === 'manual';
+        const tilesMode = docViewMode === 'tiles';
         const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
         const docs = sortDocs(categoryViewDocs(cat));
         const subfolders = sortNamed(folderChildren(cat, cur).filter(f => cur || (f.subId || '') === listState.sub));
@@ -1129,6 +1138,34 @@
                 </div>
             </div>`;
         };
+        const tileBase = 'relative group rounded-2xl p-2 pt-3 flex flex-col items-center text-center hover:bg-apple-lightGray/70 dark:hover:bg-apple-darkBorder/40 transition cursor-pointer';
+        const tileBox = 'w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center overflow-hidden shrink-0';
+        const folderTile = f => {
+            const ids = [f.id, ...descendantFolderIds(cat, f.id)];
+            const n = catDocs.filter(d => ids.includes(d.folderId)).length;
+            return `<div onclick="setFolderFilter('${f.id}')" onkeydown="if(event.key==='Enter')setFolderFilter('${f.id}')" tabindex="0" role="button" class="${tileBase}" title="${esc(f.name)}">
+                <div class="${tileBox} bg-amber-50 dark:bg-amber-900/20 text-amber-500"><i class="fa-solid fa-folder text-4xl"></i></div>
+                <p class="mt-2 text-xs font-semibold leading-snug line-clamp-2 break-words w-full">${esc(f.name)}</p>
+                <span class="text-[10px] text-apple-gray">${n} מסמכים</span>
+                ${manual ? `<div class="mt-1 flex" onclick="event.stopPropagation()">${orderBtns('moveFolderOrder', f.id, true)}</div>` : ''}</div>`;
+        };
+        const subTile = x => {
+            const n = catDocs.filter(d => d.subId === x.id).length;
+            return `<div onclick="setSubFilter('${x.id}')" onkeydown="if(event.key==='Enter')setSubFilter('${x.id}')" tabindex="0" role="button" class="${tileBase}" title="${esc(x.name)}">
+                <div class="${tileBox} bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500"><i class="fa-solid fa-layer-group text-4xl"></i></div>
+                <p class="mt-2 text-xs font-semibold leading-snug line-clamp-2 break-words w-full">${esc(x.name)}</p>
+                <span class="text-[10px] text-apple-gray">${n} מסמכים</span>
+                ${manual ? `<div class="mt-1 flex" onclick="event.stopPropagation()">${orderBtns('moveSubOrder', x.id, true)}</div>` : ''}</div>`;
+        };
+        const emptyCard = `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "העלה קבצים" כדי להתחיל.'}</div>`;
+        let listBlock;
+        if (tilesMode) {
+            const tiles = [...(showSubs ? sortNamed(cat.subs).map(subTile) : []), ...subfolders.map(folderTile), ...docs.map(renderDocTile)];
+            listBlock = tiles.length ? `<div class="card p-3"><div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">${tiles.join('')}</div></div>` : emptyCard;
+        } else if (docs.length === 0) {
+            listBlock = (subfolders.length || showSubs) && !listState.flat && !listState.tag
+                ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה, או לסמן "כל המסמכים".</p>` : emptyCard;
+        } else listBlock = renderDocsTable(docs, cat);
 
         $('app-content').innerHTML = `
         <div class="space-y-5 max-w-7xl mx-auto">
@@ -1158,20 +1195,20 @@
 
             ${tagChips}
 
-            ${showSubs ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${sortNamed(cat.subs).map(subCard).join('')}</div>` : ''}
+            ${showSubs && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${sortNamed(cat.subs).map(subCard).join('')}</div>` : ''}
 
-            ${subfolders.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
+            ${subfolders.length && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
             <div class="card p-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="flex rounded-xl overflow-hidden border border-apple-border/60 dark:border-apple-darkBorder">
-                        <button onclick="setDocViewMode('list')" class="px-3 py-2 text-xs font-semibold ${docViewMode === 'list' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת רשימה"><i class="fa-solid fa-list"></i></button>
-                        <button onclick="setDocViewMode('gallery')" class="px-3 py-2 text-xs font-semibold ${docViewMode === 'gallery' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת גלריה"><i class="fa-solid fa-grip"></i></button>
+                        <button onclick="setDocViewMode('list')" class="px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 ${docViewMode === 'list' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת רשימה"><i class="fa-solid fa-list"></i> רשימה</button>
+                        <button onclick="setDocViewMode('tiles')" class="px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 ${docViewMode === 'tiles' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת ריבועים"><i class="fa-solid fa-table-cells-large"></i> ריבועים</button>
                     </div>
                     <select onchange="setSort(this.value)" class="inp !w-auto !py-2 !text-xs" aria-label="סדר התיקיות והמסמכים">
                         ${sel(listState.sort, 'manual', 'סדר ידני (אני מסדר)')}${sel(listState.sort, 'name', 'שם (א-ת)')}${sel(listState.sort, 'name-desc', 'שם (ת-א)')}${sel(listState.sort, 'date-desc', 'תאריך (מהחדש לישן)')}${sel(listState.sort, 'date-asc', 'תאריך (מהישן לחדש)')}
                     </select>
-                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="listState.flat=this.checked;selectedDocIds=[];render()" class="rounded"> הצג גם מתיקיות משנה</label>
+                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="setFlat(this.checked)" class="rounded"> כל המסמכים, כולל מתוך תיקיות</label>
                 </div>
                 <div class="flex items-center gap-2 justify-between">
                     <div id="bulk-actions-toolbar" class="${selectedDocIds.length ? 'flex' : 'hidden'} items-center gap-2 bg-apple-blue/10 p-1.5 rounded-xl border border-apple-blue/20">
@@ -1180,16 +1217,12 @@
                         <button onclick="bulkDelete()" class="p-1.5 bg-white dark:bg-apple-darkCard rounded-lg text-red-600 text-xs px-2" aria-label="העבר לסל מחזור"><i class="fa-solid fa-trash"></i></button>
                         <button onclick="clearSelection()" class="p-1.5 text-apple-gray text-xs px-2" aria-label="בטל בחירה"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <button onclick="openAddDocModal('${cat.id}')" class="btn-primary !text-xs"><i class="fa-solid fa-plus text-[10px]"></i> מסמך חדש</button>
+                    <label class="btn-primary !text-xs cursor-pointer" title="בחר קבצים והם יישמרו מיד במקום שבו אתה נמצא"><i class="fa-solid fa-cloud-arrow-up text-[10px]"></i> העלה קבצים<input type="file" multiple class="hidden" onchange="quickUpload(event)"></label>
                 </div>
             </div>
             ${manual ? '<p class="text-[11px] text-apple-gray px-1"><i class="fa-solid fa-arrows-up-down ml-1"></i>סדר ידני: השתמש בחצים כדי להזיז תיקיות ומסמכים. כדי למיין לפי שם או תאריך, בחר סדר אחר ברשימה.</p>' : ''}
 
-            ${docs.length === 0
-                ? ((subfolders.length || showSubs) && !listState.flat && !listState.tag
-                    ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה או ללחוץ על "מסמך חדש".</p>`
-                    : `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "מסמך חדש" כדי להתחיל.'}</div>`)
-                : docViewMode === 'list' ? renderDocsTable(docs, cat) : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${docs.map(d => renderDocGalleryCard(d, false, true)).join('')}</div>`}
+            ${listBlock}
         </div>`;
         syncSelectionUI();
     }
@@ -1351,6 +1384,7 @@
         activeDocId = docId;
         const cat = getCat(doc.categoryId), fol = folderOf(cat, doc);
         $('view-doc-name').textContent = doc.title;
+        $('view-doc-star').innerHTML = `<i class="fa-${doc.isFavorite ? 'solid text-amber-500' : 'regular'} fa-star text-sm"></i>`;
         $('view-doc-category-folder').textContent = `${cat ? cat.name : ''} › ${folderLabel(cat, doc)}`;
         $('view-doc-icon').innerHTML = `<i class="fa-solid ${getFileIcon(doc.fileType)}"></i>`;
         $('view-doc-date').textContent = formatDate(doc.date) || '-';
@@ -2263,6 +2297,70 @@
             toast(`הורדו ${entries.length} קבצים בקובץ ZIP` + (missing ? `, ${missing} לא נמצאו` : '') + (noFile ? `, ${noFile} מסמכים בלי קובץ לא נכללו` : ''));
         } catch (err) { console.error(err); toast('יצירת קובץ ה-ZIP נכשלה.'); }
         finally { zipBusy = false; }
+    }
+
+    // =====================================================================
+    //  תצוגת ריבועים, העלאה מהירה ופעולות מהירות
+    // =====================================================================
+    function renderDocTile(doc) {
+        const manual = listState.sort === 'manual';
+        const thumb = (doc.fileType === 'image' && doc.fileKey)
+            ? `<img data-file-key="${esc(doc.fileKey)}" alt="" class="w-full h-full object-cover">`
+            : `<i class="fa-solid ${getFileIcon(doc.fileType)} text-4xl"></i>`;
+        return `<div onclick="openDocViewModal('${doc.id}')" onkeydown="if(event.key==='Enter')openDocViewModal('${doc.id}')" tabindex="0" role="button" title="${esc(doc.title)}" class="relative group rounded-2xl p-2 pt-3 flex flex-col items-center text-center hover:bg-apple-lightGray/70 dark:hover:bg-apple-darkBorder/40 transition cursor-pointer">
+            <span class="absolute top-1.5 right-1.5 z-10" onclick="event.stopPropagation()"><input type="checkbox" data-doc="${doc.id}" onchange="toggleSelectDoc('${doc.id}', this.checked)" ${selectedDocIds.includes(doc.id) ? 'checked' : ''} class="rounded" aria-label="בחר מסמך"></span>
+            <button onclick="toggleFavorite('${doc.id}', event)" class="absolute top-0.5 left-0.5 z-10 text-xs p-1.5 ${doc.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="מועדף"><i class="fa-${doc.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden shrink-0">${thumb}</div>
+            <p class="mt-2 text-xs font-semibold leading-snug line-clamp-2 break-words w-full">${esc(doc.title)}</p>
+            <span class="text-[10px] text-apple-gray">${esc(doc.size) || formatDate(doc.date)}</span>
+            ${manual ? `<div class="mt-1 flex" onclick="event.stopPropagation()">${orderBtns('moveDocOrder', doc.id, true)}</div>` : ''}
+        </div>`;
+    }
+    function setFlat(v) {
+        listState.flat = !!v; selectedDocIds = [];
+        try { localStorage.setItem('docflow_flat', v ? '1' : '0'); } catch (e) {}
+        render();
+    }
+    // העלאה מהירה: בוחרים קבצים והם נשמרים מיד במקום שבו אתה נמצא (קטגוריה / תת-קטגוריה / תיקיה), בלי טופס
+    async function quickUpload(e) {
+        const files = [...(e.target.files || [])];
+        e.target.value = '';
+        const cat = getCat(activeCategoryId);
+        if (!files.length || !cat) return;
+        const fol = cat.folders.find(f => f.id === listState.folder) || null;
+        const sub = fol ? getSub(cat, fol.subId) : getSub(cat, listState.sub);
+        const where = fol ? fol.name : sub ? sub.name : cat.name;
+        let done = 0;
+        toast(`מעלה ${files.length} קבצים...`);
+        const results = await Promise.allSettled(files.map(async f => {
+            const doc = { id: uid('doc'), title: f.name.replace(/\.[^.]+$/, '') || f.name, categoryId: cat.id, subId: sub ? sub.id : '', folderId: fol ? fol.id : '',
+                tags: [], content: '', date: today(), size: '', fileName: '', fileKey: '', fileType: 'other', isFavorite: false, isDeleted: false, versions: [] };
+            await attachFile(doc, f);
+            done++; toast(`מעלה ${done}/${files.length}...`);
+            return doc;
+        }));
+        const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+        const failed = results.length - ok.length;
+        if (ok.length) { appData.documents.push(...ok); saveData(); render(); }
+        const undo = ok.length ? async () => {
+            for (const d of ok) await purgeDocFiles(d);
+            const ids = new Set(ok.map(d => d.id));
+            appData.documents = appData.documents.filter(d => !ids.has(d.id));
+            saveData(); render();
+        } : null;
+        toast(ok.length ? `${ok.length} מסמכים נוספו ל"${where}"` + (failed ? `, ${failed} נכשלו` : '') : 'שמירת הקבצים נכשלה. ייתכן שהאחסון בדפדפן מלא.', undo);
+    }
+    function toggleFavoriteFromView() {
+        const d = getDoc(activeDocId);
+        if (!d) return;
+        d.isFavorite = !d.isFavorite; saveData(); render();
+        $('view-doc-star').innerHTML = `<i class="fa-${d.isFavorite ? 'solid text-amber-500' : 'regular'} fa-star text-sm"></i>`;
+    }
+    async function deleteFromView() {
+        const id = activeDocId;
+        await deleteDoc(id);
+        const d = getDoc(id);
+        if (d && d.isDeleted) closeDocViewModal();
     }
     </script>
     <script>
