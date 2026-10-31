@@ -142,7 +142,7 @@
                     <button onclick="toggleDarkMode()" id="dark-switch" role="switch" aria-checked="false" class="ios-row"><span class="ios-ico bg-[#5856D6]"><i id="dark-mode-icon" class="fa-solid fa-moon"></i></span><span id="dark-mode-label" class="flex-1">מצב כהה</span>
                         <span id="dark-track" class="relative w-[51px] h-[31px] rounded-full bg-[#E9E9EA] dark:bg-[#39393D] transition-colors duration-300 shrink-0"><span id="dark-knob" class="absolute top-[2px] right-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-300"></span></span></button>
                 </div>
-                <p id="app-version" class="text-[11px] text-apple-gray text-center mt-6">גרסה 1.3 · הגדרות הורדה, ניווט</p>
+                <p id="app-version" class="text-[11px] text-apple-gray text-center mt-6">גרסה 1.4 · מאפיינים וניווט</p>
             </div>
 
             <!-- עמוד הגדרות (נפתח כמו ב-iOS) -->
@@ -1137,25 +1137,26 @@
         const sel = (v, val, l) => `<option value="${val}" ${v === val ? 'selected' : ''}>${l}</option>`;
         $('header-title').textContent = info.title;
 
-        // ---- ניווט (בולט וגדול) ----
-        const navBtn = 'shrink-0 w-10 h-10 rounded-xl bg-white dark:bg-apple-darkCard text-apple-blue flex items-center justify-center shadow-sm active:scale-95 transition';
-        const sep = '<i class="fa-solid fa-chevron-left text-[11px] text-apple-blue/50 shrink-0"></i>';
-        const pill = (label, onclick, on) => `<button onclick="${onclick}" class="shrink-0 px-4 py-2 rounded-xl text-[15px] font-bold whitespace-nowrap transition ${on ? 'bg-apple-blue text-white shadow-sm' : 'bg-white/80 dark:bg-apple-darkCard text-apple-blue'}">${label}</button>`;
-        const navBar = `<nav class="rounded-2xl bg-apple-blue/10 dark:bg-apple-blue/20 border border-apple-blue/25 p-2 flex items-center gap-2 overflow-x-auto no-scrollbar" aria-label="ניווט">
-            <button onclick="goBack()" class="${navBtn}" aria-label="חזור"><i class="fa-solid fa-chevron-right"></i></button>
-            <button onclick="switchView('main-dashboard')" class="${navBtn}" aria-label="לדאשבורד הראשי"><i class="fa-solid fa-house"></i></button>${sep}
-            ${pill(esc(cat.name), "setSubFilter('')", !cur && !curSub)}
-            ${curSub ? sep + pill(esc(curSub.name), `setSubFilter('${curSub.id}')`, !cur) : ''}
-            ${trail.map((f, i) => sep + pill(esc(f.name), `setFolderFilter('${f.id}')`, i === trail.length - 1)).join('')}</nav>`;
+        // ---- ניווט (כמו קודם: שורת נתיב קטנה) ----
+        const crumbs = `<button onclick="setSubFilter('')" class="font-semibold hover:text-apple-blue ${(cur || curSub) ? '' : 'text-apple-blue'}">${esc(cat.name)}</button>` +
+            (curSub ? `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setSubFilter('${curSub.id}')" class="font-semibold hover:text-apple-blue ${cur ? '' : 'text-apple-blue'}">${esc(curSub.name)}</button>` : '') +
+            trail.map((f, i) => `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setFolderFilter('${f.id}')" class="font-semibold hover:text-apple-blue ${i === trail.length - 1 ? 'text-apple-blue' : ''}">${esc(f.name)}</button>`).join('');
 
-        // ---- שורת ריבועים: מאפייני הנושא + חדשים ----
-        const sq = (onclick, icon, cls, l1, l2, extra = '') => `<button type="button" onclick="${onclick}" class="card relative h-[84px] p-2 flex flex-col items-center justify-center text-center gap-1 min-w-0 hover:shadow-md active:scale-95 transition">${extra}
-            <span class="w-8 h-8 rounded-xl ${cls} flex items-center justify-center text-sm shrink-0"><i class="fa-solid ${icon}"></i></span>
-            <span class="text-[11px] font-bold leading-tight w-full truncate">${l1}</span><span class="text-[10px] text-apple-gray leading-none">${l2}</span></button>`;
-        const squares = `<div class="grid grid-cols-3 gap-2">
-            ${sq('openPropsModal()', info.icon, info.iconCls, esc(info.title), `${info.count} מסמכים`, '<i class="fa-solid fa-ellipsis absolute top-1.5 left-2 text-[11px] text-apple-gray"></i>')}
-            ${sq(`openAddSubModal('${cat.id}')`, 'fa-layer-group', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500', 'תת-קטגוריה', 'חדשה +')}
-            ${sq(`openAddFolderModal('${cat.id}')`, 'fa-folder-plus', 'bg-amber-50 dark:bg-amber-900/20 text-amber-500', 'תיקיה', 'חדשה +')}</div>`;
+        // ---- כותרת הנושא: ריבוע מאפיינים גדול + כפתורי "חדש" ----
+        const tint = info.ctx === 'folder' ? 'from-amber-500/15 border-amber-400/40' : info.ctx === 'sub' ? 'from-indigo-500/15 border-indigo-400/40' : 'from-apple-blue/15 border-apple-blue/30';
+        const headerBlock = `<div class="flex items-stretch gap-3">
+            <button type="button" onclick="openPropsModal()" class="card relative flex-1 min-w-0 min-h-[116px] p-4 flex items-center gap-3 text-right bg-gradient-to-br ${tint} to-transparent border-2 hover:shadow-lg active:scale-[0.98] transition" aria-label="מאפיינים ופעולות: ${esc(info.title)}">
+                <span class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${info.iconCls} flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-sm"><i class="fa-solid ${info.icon}"></i></span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-lg sm:text-xl font-bold leading-tight break-words line-clamp-2">${esc(info.title)}</span>
+                    <span class="block text-xs text-apple-gray mt-1">${info.count} מסמכים</span>
+                    <span class="block text-[11px] font-semibold text-apple-blue mt-1.5">מאפיינים ופעולות <i class="fa-solid fa-chevron-left text-[9px] mr-0.5"></i></span>
+                </span>
+            </button>
+            <div class="flex flex-col gap-2 shrink-0 justify-center">
+                <button onclick="openAddSubModal('${cat.id}')" class="btn-soft justify-start whitespace-nowrap"><i class="fa-solid fa-layer-group"></i> תת-קטגוריה חדשה</button>
+                <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft justify-start whitespace-nowrap"><i class="fa-solid fa-folder-plus"></i> תיקיה חדשה</button>
+            </div></div>`;
 
         const subCard = x => {
             const dn = catDocs.filter(d => d.subId === x.id).length, fn = cat.folders.filter(f => f.subId === x.id).length;
@@ -1219,35 +1220,25 @@
                 ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה, או לסמן "הכל".</p>` : emptyCard;
         } else listBlock = renderDocsTable(docs, cat);
 
-        const nsel = selectedDocIds.length;
         $('app-content').innerHTML = `
         <div class="space-y-3 max-w-7xl mx-auto">
-            ${navBar}
-            ${squares}
+            ${headerBlock}
+            <div class="flex items-center flex-wrap text-sm px-1" aria-label="מיקום נוכחי">${crumbs}</div>
             ${tagChips}
             ${showSubs && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${sortNamed(cat.subs).map(subCard).join('')}</div>` : ''}
             ${subfolders.length && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
             <div class="card p-2">
-                <div id="toolbar-controls" class="${nsel ? 'hidden' : 'flex'} items-center gap-2">
+                <div id="toolbar-controls" class="flex items-center gap-2">
                     <select onchange="setDocViewMode(this.value)" class="inp !w-auto !py-1.5 !px-2 !text-xs min-w-0" aria-label="תצוגת מסמכים">${sel(docViewMode, 'list', 'רשימה')}${sel(docViewMode, 'tiles', 'ריבועים')}</select>
                     <select onchange="setSort(this.value)" class="inp !w-auto !py-1.5 !px-2 !text-xs min-w-0" aria-label="סדר התיקיות והמסמכים">${sel(listState.sort, 'manual', 'סדר ידני')}${sel(listState.sort, 'name', 'שם א-ת')}${sel(listState.sort, 'name-desc', 'שם ת-א')}${sel(listState.sort, 'date-desc', 'חדשים קודם')}${sel(listState.sort, 'date-asc', 'ישנים קודם')}</select>
                     <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap px-1" title="הצג את כל המסמכים, כולל מתוך תיקיות"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="setFlat(this.checked)" class="rounded"> הכל</label>
-                </div>
-                <div id="bulk-actions-toolbar" class="${nsel ? 'flex' : 'hidden'} items-center justify-between gap-2 px-1">
-                    <span id="bulk-count-label" class="text-xs font-bold text-apple-blue">${nsel} נבחרו</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="bulkFavorite()" class="p-1.5 bg-apple-lightGray dark:bg-apple-darkBorder rounded-lg text-amber-500 text-xs px-2.5" aria-label="הוסף למועדפים"><i class="fa-solid fa-star"></i></button>
-                        <button onclick="bulkDelete()" class="p-1.5 bg-apple-lightGray dark:bg-apple-darkBorder rounded-lg text-red-600 text-xs px-2.5" aria-label="העבר לסל מחזור"><i class="fa-solid fa-trash"></i></button>
-                        <button onclick="clearSelection()" class="p-1.5 text-apple-gray text-xs px-2.5" aria-label="בטל בחירה"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
                 </div>
             </div>
             ${manual ? '<p class="text-[11px] text-apple-gray px-1"><i class="fa-solid fa-arrows-up-down ml-1"></i>סדר ידני: השתמש בחצים להזזת תיקיות ומסמכים.</p>' : ''}
 
             ${listBlock}
         </div>`;
-        syncSelectionUI();
     }
 
     // ---- היסטוריית ניווט: חזרה אחורה בכפתור, בצעד "חזור" של המערכת ובהחלקה מימין לשמאל ----
@@ -1331,14 +1322,12 @@
     function setTagFilter(i) { const t = tagsSorted(activeCategoryId)[i]; if (!t) return; listState.tag = listState.tag === t ? '' : t; selectedDocIds = []; render(); }
 
     function renderDocsTable(docs, cat) {
-        const allSelected = docs.length && docs.every(d => selectedDocIds.includes(d.id));
         return `
         <div class="card overflow-hidden hidden md:block">
             <div class="overflow-x-auto">
             <table class="w-full text-right border-collapse">
                 <thead>
                     <tr class="bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 text-xs font-semibold text-apple-gray border-b border-apple-border/40 dark:border-apple-darkBorder">
-                        <th class="py-3 px-4 w-10 text-center"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAllDocs(this)" ${allSelected ? 'checked' : ''} class="rounded" aria-label="בחר הכל"></th>
                         <th class="py-3 px-2 w-8"></th>
                         <th class="py-3 px-4">שם המסמך</th>
                         <th class="py-3 px-4">תיקיה</th>
@@ -1350,7 +1339,6 @@
                     ${docs.map(doc => {
                         const fol = folderOf(cat, doc);
                         return `<tr class="hover:bg-apple-lightGray/30 dark:hover:bg-apple-darkBorder/20 transition cursor-pointer" onclick="openDocViewModal('${doc.id}')">
-                            <td class="py-3 px-4 text-center" onclick="event.stopPropagation()"><input type="checkbox" data-doc="${doc.id}" onchange="toggleSelectDoc('${doc.id}', this.checked)" ${selectedDocIds.includes(doc.id) ? 'checked' : ''} class="rounded" aria-label="בחר מסמך"></td>
                             <td class="py-3 px-2 text-center" onclick="event.stopPropagation()"><button onclick="toggleFavorite('${doc.id}', event)" class="text-base transition ${doc.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="מועדף"><i class="fa-${doc.isFavorite ? 'solid' : 'regular'} fa-star"></i></button></td>
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-3">
@@ -1375,7 +1363,7 @@
             </div>
         </div>
         <div class="card divide-y divide-apple-border/30 dark:divide-apple-darkBorder md:hidden">
-            ${docs.map(d => renderDocRow(d, { selectable: true, reorder: true })).join('')}
+            ${docs.map(d => renderDocRow(d, { reorder: true })).join('')}
         </div>`;
     }
 
@@ -1383,7 +1371,6 @@
     function renderDocRow(doc, opts = {}) {
         const cat = getCat(doc.categoryId), fol = folderOf(cat, doc);
         return `<div class="p-3 flex items-center gap-3 cursor-pointer hover:bg-apple-lightGray/30 dark:hover:bg-apple-darkBorder/20 transition" onclick="openDocViewModal('${doc.id}')" onkeydown="if(event.key==='Enter')openDocViewModal('${doc.id}')" tabindex="0" role="button">
-            ${opts.selectable ? `<span onclick="event.stopPropagation()"><input type="checkbox" data-doc="${doc.id}" onchange="toggleSelectDoc('${doc.id}', this.checked)" ${selectedDocIds.includes(doc.id) ? 'checked' : ''} class="rounded" aria-label="בחר מסמך"></span>` : ''}
             <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0"><i class="fa-solid ${getFileIcon(doc.fileType)}"></i></div>
             <div class="flex-1 min-w-0">
                 <p class="font-semibold text-sm truncate">${esc(doc.title)}</p>
@@ -1428,46 +1415,6 @@
         </div>`;
     }
 
-    // =====================================================================
-    //  בחירה מרובה
-    // =====================================================================
-    function currentListDocs() {
-        const cat = getCat(activeCategoryId);
-        return cat ? categoryViewDocs(cat) : [];
-    }
-    function toggleSelectDoc(id, checked) {
-        selectedDocIds = checked ? [...new Set([...selectedDocIds, id])] : selectedDocIds.filter(x => x !== id);
-        syncSelectionUI();
-    }
-    function toggleSelectAllDocs(master) {
-        selectedDocIds = master.checked ? currentListDocs().map(d => d.id) : [];
-        syncSelectionUI();
-    }
-    function clearSelection() { selectedDocIds = []; syncSelectionUI(); }
-    function syncSelectionUI() {
-        document.querySelectorAll('input[data-doc]').forEach(cb => cb.checked = selectedDocIds.includes(cb.dataset.doc));
-        const master = $('select-all-cb');
-        if (master) { const list = currentListDocs(); master.checked = list.length > 0 && list.every(d => selectedDocIds.includes(d.id)); }
-        const tb = $('bulk-actions-toolbar');
-        if (!tb) return;
-        { const tc = $('toolbar-controls'); if (tc) { tc.classList.toggle('hidden', !!selectedDocIds.length); tc.classList.toggle('flex', !selectedDocIds.length); } }
-        tb.classList.toggle('hidden', !selectedDocIds.length);
-        tb.classList.toggle('flex', !!selectedDocIds.length);
-        $('bulk-count-label').textContent = `${selectedDocIds.length} נבחרו`;
-    }
-    function bulkFavorite() {
-        appData.documents.forEach(d => { if (selectedDocIds.includes(d.id)) d.isFavorite = true; });
-        const n = selectedDocIds.length;
-        selectedDocIds = []; saveData(); render(); toast(`${n} מסמכים נוספו למועדפים`);
-    }
-    async function bulkDelete() {
-        const ids = [...selectedDocIds];
-        if (!ids.length) return;
-        if (!await askConfirm('מחיקת מסמכים', `בטוח שברצונך למחוק ${ids.length} מסמכים? הם יועברו לסל המחזור.`, 'מחק מסמכים', true)) return;
-        ids.forEach(id => { const d = getDoc(id); if (d) { d.isDeleted = true; d.deletedAt = today(); } });
-        selectedDocIds = []; saveData(); render();
-        toast(`${ids.length} מסמכים הועברו לסל המחזור`, () => { ids.forEach(id => { const d = getDoc(id); if (d) d.isDeleted = false; }); saveData(); render(); });
-    }
 
     // =====================================================================
     //  צפייה במסמך וגרסאות
@@ -2425,7 +2372,6 @@
             ? `<img data-file-key="${esc(doc.fileKey)}" alt="" class="w-full h-full object-cover">`
             : `<i class="fa-solid ${getFileIcon(doc.fileType)} text-4xl"></i>`;
         return `<div onclick="openDocViewModal('${doc.id}')" onkeydown="if(event.key==='Enter')openDocViewModal('${doc.id}')" tabindex="0" role="button" title="${esc(doc.title)}" class="relative group rounded-2xl p-2 pt-3 flex flex-col items-center text-center hover:bg-apple-lightGray/70 dark:hover:bg-apple-darkBorder/40 transition cursor-pointer">
-            <span class="absolute top-1.5 right-1.5 z-10" onclick="event.stopPropagation()"><input type="checkbox" data-doc="${doc.id}" onchange="toggleSelectDoc('${doc.id}', this.checked)" ${selectedDocIds.includes(doc.id) ? 'checked' : ''} class="rounded" aria-label="בחר מסמך"></span>
             <button onclick="toggleFavorite('${doc.id}', event)" class="absolute top-0.5 left-0.5 z-10 text-xs p-1.5 ${doc.isFavorite ? 'text-amber-500' : 'text-apple-border hover:text-amber-400'}" aria-label="מועדף"><i class="fa-${doc.isFavorite ? 'solid' : 'regular'} fa-star"></i></button>
             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden shrink-0">${thumb}</div>
             <p class="mt-2 text-xs font-semibold leading-snug line-clamp-2 break-words w-full">${esc(doc.title)}</p>
