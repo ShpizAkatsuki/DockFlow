@@ -67,11 +67,18 @@
             .btn-soft { @apply px-3 py-2 rounded-xl text-xs font-semibold bg-apple-lightGray dark:bg-apple-darkBorder hover:bg-apple-border/50 dark:hover:bg-white/10 transition inline-flex items-center gap-1.5; }
             .icon-btn { @apply w-8 h-8 rounded-lg hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder text-apple-gray hover:text-apple-blue transition inline-flex items-center justify-center shrink-0; }
             .pill { @apply text-xs bg-apple-lightGray dark:bg-apple-darkBorder text-apple-gray px-2 py-0.5 rounded-full font-medium; }
+            .ios-group { @apply bg-white dark:bg-[#1C1C1E] rounded-xl overflow-hidden divide-y divide-black/5 dark:divide-white/10; }
+            .ios-row { @apply w-full flex items-center gap-3 px-3.5 py-2.5 text-[15px] text-right hover:bg-black/5 dark:hover:bg-white/10 active:bg-black/10 transition-colors; }
+            .ios-ico { @apply w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-white text-[14px] shrink-0; }
+            .ios-head { @apply text-[13px] text-apple-gray px-4 mt-6 mb-1.5; }
+            .ios-chev { @apply text-[11px] text-black/25 dark:text-white/30; }
         }
     </style>
     <style>
         body { font-family: 'Heebo', sans-serif; transition: background-color .3s, color .3s; }
         .dark { color-scheme: dark; }
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #D2D2D7; border-radius: 9999px; }
@@ -96,91 +103,68 @@
 <body class="bg-apple-bg dark:bg-apple-darkBg text-apple-dark dark:text-gray-100 flex overflow-hidden" style="height:100vh;height:100dvh">
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="fixed inset-y-0 right-0 z-50 w-72 glass-nav border-l border-apple-border/50 dark:border-apple-darkBorder flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 translate-x-full shadow-xl lg:shadow-none" aria-label="תפריט ראשי">
-        <div class="h-16 flex items-center justify-between px-6 border-b border-apple-border/40 dark:border-apple-darkBorder shrink-0">
-            <button class="flex items-center gap-3 text-right" onclick="switchView('main-dashboard')" aria-label="לדאשבורד הראשי">
-                <div class="w-9 h-9 rounded-xl bg-apple-blue flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-folder-tree text-lg"></i>
+    <aside id="sidebar" class="fixed inset-y-0 right-0 z-50 w-80 max-w-[88vw] bg-[#F2F2F7]/95 dark:bg-black/95 backdrop-blur-2xl border-l border-black/5 dark:border-white/10 flex flex-col overflow-hidden transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)] lg:translate-x-0 translate-x-full shadow-2xl lg:shadow-none" aria-label="תפריט ראשי">
+        <div class="relative flex-1 min-h-0 overflow-hidden">
+            <!-- עמוד ראשי -->
+            <div id="side-pane-main" class="absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 transition-all duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]">
+                <div class="flex items-center justify-between pt-5 pb-1">
+                    <button class="text-right" onclick="switchView('main-dashboard')" aria-label="לדאשבורד הראשי">
+                        <h1 class="text-[32px] leading-tight font-bold tracking-tight">DocFlow</h1>
+                        <span class="text-sm text-apple-gray">ניהול מסמכים</span>
+                    </button>
+                    <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 rounded-full bg-black/10 dark:bg-white/15 text-apple-gray flex items-center justify-center" aria-label="סגור תפריט"><i class="fa-solid fa-xmark text-sm"></i></button>
                 </div>
-                <div>
-                    <h1 class="font-bold text-base leading-tight tracking-tight">DocFlow</h1>
-                    <span class="text-xs text-apple-gray font-medium">ניהול מסמכים</span>
-                </div>
-            </button>
-            <button onclick="toggleSidebar()" class="lg:hidden text-apple-gray hover:text-apple-dark dark:hover:text-white p-2" aria-label="סגור תפריט">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        </div>
 
-        <div class="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-            <div>
-                <p class="text-xs font-semibold text-apple-gray px-3 mb-3">סקירה כללית</p>
-                <nav class="space-y-1">
-                    <button onclick="switchView('main-dashboard')" id="nav-main-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                        <i class="fa-solid fa-chart-pie w-5 text-center"></i> דאשבורד ראשי
-                    </button>
-                    <button onclick="switchView('favorites')" id="nav-favorites" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                        <div class="flex items-center gap-3"><i class="fa-solid fa-star w-5 text-center text-amber-500"></i> מסמכים מועדפים</div>
-                        <span id="favorites-count-badge" class="pill">0</span>
-                    </button>
-                    <button onclick="switchView('trash')" id="nav-trash" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                        <div class="flex items-center gap-3"><i class="fa-solid fa-trash-can w-5 text-center text-red-500"></i> סל מחזור</div>
-                        <span id="trash-count-badge" class="pill">0</span>
-                    </button>
-                    <button onclick="toggleSettingsMenu()" id="settings-btn" aria-expanded="false" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                        <div class="flex items-center gap-3"><i class="fa-solid fa-gear w-5 text-center text-apple-blue"></i> הגדרות</div>
-                        <i id="settings-chevron" class="fa-solid fa-chevron-down text-[10px] text-apple-gray transition-transform"></i>
-                    </button>
-                    <div id="settings-menu" class="hidden mr-5 pr-2 border-r border-apple-border/60 dark:border-apple-darkBorder space-y-1">
-                        <button onclick="openAddCategoryModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                            <i class="fa-solid fa-folder-plus w-5 text-center text-apple-blue"></i> הוסף קטגוריה חדשה
-                        </button>
-                        <button onclick="openReorderModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                            <i class="fa-solid fa-sort w-5 text-center text-apple-blue"></i> סדר קטגוריות
-                        </button>
-                        <button onclick="openTagsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition-colors">
-                            <i class="fa-solid fa-tags w-5 text-center text-apple-blue"></i> ניהול תגיות
-                        </button>
-                    </div>
-                </nav>
+                <div class="ios-group mt-4">
+                    <button onclick="switchView('main-dashboard')" id="nav-main-dashboard" class="ios-row"><span class="ios-ico bg-[#007AFF]"><i class="fa-solid fa-chart-pie"></i></span><span class="flex-1">דאשבורד ראשי</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                    <button onclick="switchView('recent')" id="nav-recent" class="ios-row"><span class="ios-ico bg-[#5AC8FA]"><i class="fa-regular fa-clock"></i></span><span class="flex-1">נוספו לאחרונה</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                    <button onclick="switchView('favorites')" id="nav-favorites" class="ios-row"><span class="ios-ico bg-[#FF9500]"><i class="fa-solid fa-star"></i></span><span class="flex-1">מסמכים מועדפים</span><span id="favorites-count-badge" class="text-sm text-apple-gray">0</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                    <button onclick="switchView('trash')" id="nav-trash" class="ios-row"><span class="ios-ico bg-[#FF3B30]"><i class="fa-solid fa-trash-can"></i></span><span class="flex-1">סל מחזור</span><span id="trash-count-badge" class="text-sm text-apple-gray">0</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                </div>
+
+                <p class="ios-head flex items-center justify-between"><span>קטגוריות</span><span id="category-count-badge">0</span></p>
+                <nav id="sidebar-categories" class="ios-group"></nav>
+
+                <div class="ios-group mt-6">
+                    <button onclick="openSettingsPane(true)" id="settings-btn" class="ios-row"><span class="ios-ico bg-[#8E8E93]"><i class="fa-solid fa-gear"></i></span><span class="flex-1">הגדרות</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                </div>
+
+                <p class="ios-head">סנכרון וגיבוי</p>
+                <div class="ios-group">
+                    <button id="cloud-btn" onclick="cloudToggle()" class="ios-row"><span class="ios-ico bg-[#007AFF]"><i id="cloud-icon" class="fa-solid fa-cloud"></i></span><span id="cloud-label" class="flex-1">התחבר לסנכרון (Google)</span></button>
+                    <button id="drive-btn" onclick="driveConnect()" class="hidden ios-row"><span class="ios-ico bg-[#FFCC00]"><i class="fa-brands fa-google-drive"></i></span><span class="flex-1">חבר את Google Drive (לסנכרון)</span></button>
+                    <button onclick="exportDataBackup()" class="ios-row"><span class="ios-ico bg-[#34C759]"><i class="fa-solid fa-download"></i></span><span class="flex-1">גיבוי נתונים</span></button>
+                    <label class="ios-row cursor-pointer"><span class="ios-ico bg-[#FF9500]"><i class="fa-solid fa-upload"></i></span><span class="flex-1">שחזור מגיבוי</span>
+                        <input type="file" onchange="importDataBackup(event)" class="hidden" accept=".json,application/json"></label>
+                </div>
+
+                <div class="ios-group mt-6">
+                    <button onclick="toggleDarkMode()" id="dark-switch" role="switch" aria-checked="false" class="ios-row"><span class="ios-ico bg-[#5856D6]"><i id="dark-mode-icon" class="fa-solid fa-moon"></i></span><span id="dark-mode-label" class="flex-1">מצב כהה</span>
+                        <span id="dark-track" class="relative w-[51px] h-[31px] rounded-full bg-[#E9E9EA] dark:bg-[#39393D] transition-colors duration-300 shrink-0"><span id="dark-knob" class="absolute top-[2px] right-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-300"></span></span></button>
+                </div>
+                <p id="app-version" class="text-[11px] text-apple-gray text-center mt-6">גרסה 1.3 · הגדרות הורדה, ניווט</p>
             </div>
-            <div>
-                <div class="flex items-center justify-between px-3 mb-3">
-                    <p class="text-xs font-semibold text-apple-gray">קטגוריות</p>
-                    <span id="category-count-badge" class="pill">0</span>
+
+            <!-- עמוד הגדרות (נפתח כמו ב-iOS) -->
+            <div id="side-pane-settings" aria-hidden="true" class="absolute inset-0 overflow-y-auto overscroll-contain px-4 pb-8 -translate-x-full opacity-0 pointer-events-none transition-all duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]">
+                <button onclick="openSettingsPane(false)" class="flex items-center gap-1.5 text-apple-blue text-[16px] pt-5"><i class="fa-solid fa-chevron-right text-sm"></i> חזרה</button>
+                <h2 class="text-[32px] leading-tight font-bold tracking-tight mt-2 mb-4">הגדרות</h2>
+                <div class="ios-group">
+                    <button onclick="openAddCategoryModal()" class="ios-row"><span class="ios-ico bg-[#34C759]"><i class="fa-solid fa-folder-plus"></i></span><span class="flex-1">הוסף קטגוריה חדשה</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                    <button onclick="openReorderModal()" class="ios-row"><span class="ios-ico bg-[#FF9500]"><i class="fa-solid fa-sort"></i></span><span class="flex-1">סדר קטגוריות</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                    <button onclick="openTagsModal()" class="ios-row"><span class="ios-ico bg-[#AF52DE]"><i class="fa-solid fa-tags"></i></span><span class="flex-1">ניהול תגיות</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
                 </div>
-                <nav id="sidebar-categories" class="space-y-1"></nav>
+                <div class="ios-group mt-6">
+                    <button onclick="openDownloadSettings()" class="ios-row"><span class="ios-ico bg-[#007AFF]"><i class="fa-solid fa-download"></i></span><span class="flex-1">הגדרות הורדה</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>
+                </div>
             </div>
-        </div>
-
-        <div class="px-3 pb-3 shrink-0">
-            <button id="cloud-btn" onclick="cloudToggle()" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-apple-blue/10 text-apple-blue hover:bg-apple-blue/20 transition">
-                <i id="cloud-icon" class="fa-solid fa-cloud"></i><span id="cloud-label">התחבר לסנכרון (Google)</span>
-            </button>
-            <button id="drive-btn" onclick="driveConnect()" class="hidden w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition">
-                <i class="fa-brands fa-google-drive"></i><span>חבר את Google Drive (לסנכרון)</span>
-            </button>
-            <p id="app-version" class="text-[10px] text-apple-gray text-center mt-2">גרסה: 28/10 · ריבועים, העלאה מהירה</p>
-        </div>
-
-                <div class="p-3 border-t border-apple-border/40 dark:border-apple-darkBorder bg-apple-lightGray/50 dark:bg-apple-darkBorder/30 grid grid-cols-3 gap-2 shrink-0">
-            <button onclick="toggleDarkMode()" class="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white dark:hover:bg-apple-darkCard transition text-xs font-medium">
-                <i id="dark-mode-icon" class="fa-solid fa-moon text-base"></i><span id="dark-mode-label">מצב כהה</span>
-            </button>
-            <button onclick="exportDataBackup()" class="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white dark:hover:bg-apple-darkCard transition text-xs font-medium text-apple-blue">
-                <i class="fa-solid fa-download text-base"></i><span>גיבוי</span>
-            </button>
-            <label class="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white dark:hover:bg-apple-darkCard transition text-xs font-medium text-emerald-600 cursor-pointer">
-                <i class="fa-solid fa-upload text-base"></i><span>שחזור</span>
-                <input type="file" onchange="importDataBackup(event)" class="hidden" accept=".json,application/json">
-            </label>
         </div>
     </aside>
 
     <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 hidden lg:hidden"></div>
 
     <!-- Main -->
-    <main class="flex-1 flex flex-col overflow-hidden lg:mr-72 min-w-0">
+    <main class="flex-1 flex flex-col overflow-hidden lg:mr-80 min-w-0">
         <header class="h-16 glass-nav border-b border-apple-border/40 dark:border-apple-darkBorder flex items-center justify-between px-4 sm:px-6 z-30 shrink-0 gap-3">
             <div class="flex items-center gap-2 sm:gap-4 min-w-0">
                 <button onclick="toggleSidebar()" class="lg:hidden text-apple-dark dark:text-white p-2 rounded-xl hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder transition" aria-label="פתח תפריט">
@@ -446,6 +430,33 @@
             </div>
             <div class="px-6 py-4 border-t border-apple-border/40 dark:border-apple-darkBorder flex justify-end">
                 <button onclick="closeTagsModal()" class="btn-primary">סיום</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topic properties (opened from the properties square) -->
+    <div id="props-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm hidden sm:p-3" role="dialog" aria-modal="true" onmousedown="if(event.target===this)closePropsModal()">
+        <div class="bg-[#F2F2F7] dark:bg-black w-full sm:max-w-md max-h-[88vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between px-5 pt-4 pb-1">
+                <h3 class="text-base font-bold">מאפיינים</h3>
+                <button onclick="closePropsModal()" class="w-8 h-8 rounded-full bg-black/10 dark:bg-white/15 text-apple-gray flex items-center justify-center" aria-label="סגור"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div id="props-body" class="px-4 pb-6 pt-2 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Download settings -->
+    <div id="dl-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm hidden sm:p-3" role="dialog" aria-modal="true" onmousedown="if(event.target===this)closeDlModal()">
+        <div class="bg-[#F2F2F7] dark:bg-black w-full sm:max-w-md max-h-[90vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between px-5 pt-4 pb-1">
+                <h3 class="text-base font-bold">הגדרות הורדה</h3>
+                <button onclick="closeDlModal()" class="w-8 h-8 rounded-full bg-black/10 dark:bg-white/15 text-apple-gray flex items-center justify-center" aria-label="סגור"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div class="px-4 pb-6 pt-1 overflow-y-auto">
+                <p class="ios-head !mt-3">לאן להוריד קטגוריות, תיקיות וייצוא מלא</p>
+                <div id="dl-options" class="ios-group"></div>
+                <p class="text-xs text-apple-gray px-1 mt-3 leading-relaxed">בטלפון הקובץ יורד כ-ZIP בשם dockflow. לחיצה עליו באפליקציית הקבצים פותחת אותו כתיקיית dockflow, עם כל הנושאים, התיקיות והמסמכים כמו באפליקציה. בדרייב נוצרת תיקיה בשם "DocFlow - קבצים מסודרים" עם אותו מבנה.</p>
+                <button onclick="exportAll()" class="btn-primary w-full mt-4 !py-3"><i class="fa-solid fa-box-archive"></i> ייצא את כל הנושאים והקבצים עכשיו</button>
             </div>
         </div>
     </div>
@@ -756,14 +767,23 @@
     function toggleSidebar() {
         $('sidebar').classList.toggle('translate-x-full');
         $('sidebar-backdrop').classList.toggle('hidden');
+        if ($('sidebar').classList.contains('translate-x-full')) openSettingsPane(false);
+    }
+    function openSettingsPane(open) {
+        const m = $('side-pane-main'), p = $('side-pane-settings');
+        ['translate-x-1/3', 'opacity-0', 'pointer-events-none'].forEach(c => m.classList.toggle(c, !!open));
+        ['-translate-x-full', 'opacity-0', 'pointer-events-none'].forEach(c => p.classList.toggle(c, !open));
+        p.setAttribute('aria-hidden', String(!open));
     }
     function closeSidebarIfMobile() {
         if (window.innerWidth < 1024 && !$('sidebar').classList.contains('translate-x-full')) toggleSidebar();
     }
     function applyThemeIcon() {
         const dark = document.documentElement.classList.contains('dark');
-        $('dark-mode-icon').className = dark ? 'fa-solid fa-sun text-base text-amber-400' : 'fa-solid fa-moon text-base';
-        $('dark-mode-label').textContent = dark ? 'מצב בהיר' : 'מצב כהה';
+        const t = $('dark-track'), k = $('dark-knob'), sw = $('dark-switch');
+        if (t) { t.classList.toggle('bg-[#34C759]', dark); t.classList.toggle('bg-[#E9E9EA]', !dark); t.classList.toggle('dark:bg-[#39393D]', !dark); }
+        if (k) k.classList.toggle('-translate-x-5', dark);
+        if (sw) sw.setAttribute('aria-checked', String(dark));
     }
     function toggleDarkMode() {
         const dark = document.documentElement.classList.toggle('dark');
@@ -775,7 +795,7 @@
         if (e.key === 'Escape') {
             if (moveResolve) return moveResolve(null);
             if (confirmResolve) return confirmResolve(false);
-            ['doc-view-modal', 'doc-modal', 'category-modal', 'folder-modal', 'sub-modal', 'reorder-modal', 'tags-modal'].forEach(id => $(id).classList.add('hidden'));
+            ['doc-view-modal', 'doc-modal', 'category-modal', 'folder-modal', 'sub-modal', 'reorder-modal', 'tags-modal', 'props-modal', 'dl-modal'].forEach(id => $(id).classList.add('hidden'));
         } else if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
             e.preventDefault();
             const s = window.innerWidth >= 640 ? $('global-search') : $('mobile-search');
@@ -787,11 +807,7 @@
         applyThemeIcon();
         buildIconPicker();
         initDragAndDrop();
-        try { // כניסה ישר לקטגוריה האחרונה (או לקטגוריה היחידה): חוסך לחיצה
-            const lc = localStorage.getItem('docflow_last_cat');
-            const id = getCat(lc) ? lc : (appData.categories.length === 1 ? appData.categories[0].id : null);
-            if (id) { currentView = 'category'; activeCategoryId = id; }
-        } catch (e) {}
+        try { localStorage.removeItem('docflow_last_cat'); } catch (e) {} // תמיד מתחילים מהדאשבורד הראשי
         render();
         migrateFiles();
     });
@@ -799,13 +815,12 @@
     // =====================================================================
     //  ניווט ורינדור מרכזי
     // =====================================================================
-    function switchView(viewId, catId = null) {
+    function _switchView(viewId, catId = null) {
         currentView = viewId;
         activeCategoryId = catId;
         selectedDocIds = [];
         listState = { sort: listState.sort, sub: '', folder: '', flat: listState.flat, tag: '' };
         moreOpen = false;
-        try { if (viewId === 'category' && catId) localStorage.setItem('docflow_last_cat', catId); else localStorage.removeItem('docflow_last_cat'); } catch (e) {}
         searchQuery = ''; $('global-search').value = ''; $('mobile-search').value = '';
         closeSidebarIfMobile();
         render();
@@ -813,9 +828,8 @@
     }
 
     function setNavActive(btn, on) {
-        ['bg-apple-blue', 'text-white', 'shadow-sm'].forEach(c => btn.classList.toggle(c, on));
-        btn.classList.toggle('hover:bg-apple-lightGray', !on);
-        btn.classList.toggle('dark:hover:bg-apple-darkBorder', !on);
+        btn.classList.toggle('bg-apple-blue/10', !!on);
+        btn.classList.toggle('font-semibold', !!on);
     }
 
     function render() {
@@ -823,11 +837,12 @@
         const scroll = content.scrollTop;
         updateBadges();
         renderSidebarCategories();
-        ['main-dashboard', 'favorites', 'trash'].forEach(v => setNavActive($('nav-' + v), !searchQuery && currentView === v));
+        ['main-dashboard', 'recent', 'favorites', 'trash'].forEach(v => setNavActive($('nav-' + v), !searchQuery && currentView === v));
         const title = $('header-title');
         if (searchQuery) { title.textContent = 'תוצאות חיפוש'; renderSearch(); }
         else if (currentView === 'main-dashboard') { title.textContent = 'דאשבורד ראשי'; renderMainDashboard(); }
         else if (currentView === 'favorites') { title.textContent = 'מסמכים מועדפים'; renderFavoritesView(); }
+        else if (currentView === 'recent') { title.textContent = 'נוספו לאחרונה'; renderRecentView(); }
         else if (currentView === 'trash') { title.textContent = 'סל מחזור'; renderTrashView(); }
         else {
             const cat = getCat(activeCategoryId);
@@ -845,15 +860,18 @@
         $('category-count-badge').textContent = appData.categories.length;
     }
 
+    const IOS_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA', '#5856D6', '#A2845E', '#30B0C7', '#FF3B30'];
     function renderSidebarCategories() {
         $('sidebar-categories').innerHTML = appData.categories.length === 0
-            ? '<p class="text-xs text-apple-gray px-3">אין קטגוריות עדיין.</p>'
+            ? '<p class="text-xs text-apple-gray px-4 py-3">אין קטגוריות עדיין.</p>'
             : sortedCategories().map(cat => {
                 const n = activeDocs().filter(d => d.categoryId === cat.id).length;
                 const on = !searchQuery && currentView === 'category' && activeCategoryId === cat.id;
-                return `<button onclick="switchView('category','${cat.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition group ${on ? 'bg-apple-blue text-white shadow-sm' : 'hover:bg-apple-lightGray dark:hover:bg-apple-darkBorder'}">
-                    <div class="flex items-center gap-3 truncate"><i class="fa-solid ${safeIcon(cat.icon)} w-5 text-center ${on ? '' : 'text-apple-gray group-hover:text-apple-blue'}"></i><span class="truncate">${esc(cat.name)}</span>${cat.isFavorite ? '<i class="fa-solid fa-star text-[10px] text-amber-400"></i>' : ''}</div>
-                    <span class="pill">${n}</span></button>`;
+                const col = IOS_COLORS[appData.categories.indexOf(cat) % IOS_COLORS.length];
+                return `<button onclick="switchView('category','${cat.id}')" class="ios-row ${on ? 'bg-apple-blue/10' : ''}">
+                    <span class="ios-ico" style="background:${col}"><i class="fa-solid ${safeIcon(cat.icon)}"></i></span>
+                    <span class="flex-1 truncate ${on ? 'font-semibold text-apple-blue' : 'font-medium'}">${esc(cat.name)}${cat.isFavorite ? ' <i class="fa-solid fa-star text-[10px] text-amber-400"></i>' : ''}</span>
+                    <span class="text-sm text-apple-gray">${n}</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>`;
             }).join('');
     }
 
@@ -863,6 +881,23 @@
             const url = await getObjectUrl(img.dataset.fileKey);
             if (url) img.src = url; else img.style.display = 'none';
         });
+    }
+
+    function dateMinus(n) {
+        const d = new Date(); d.setDate(d.getDate() - n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function renderRecentView() {
+        const docs = [...activeDocs()].sort((a, b) => (b.date || '').localeCompare(a.date || '') || idTime(b.id) - idTime(a.id)).slice(0, 50);
+        $('app-content').innerHTML = `
+        <div class="space-y-4 max-w-3xl mx-auto">
+            <div class="card p-4 flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 flex items-center justify-center text-lg"><i class="fa-regular fa-clock"></i></div>
+                <div><h2 class="text-lg font-bold">נוספו לאחרונה</h2><p class="text-xs text-apple-gray">${docs.length ? `${docs.length} המסמכים החדשים ביותר` : 'אין מסמכים עדיין'}</p></div>
+            </div>
+            ${docs.length ? `<div class="card divide-y divide-apple-border/30 dark:divide-apple-darkBorder">${docs.map(d => renderDocRow(d, { showCat: true })).join('')}</div>`
+                : '<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>עדיין אין מסמכים.</div>'}
+        </div>`;
     }
 
     function greeting() {
@@ -875,14 +910,13 @@
     // =====================================================================
     function renderMainDashboard() {
         const docs = activeDocs();
-        const recent = [...docs].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
+        const since = dateMinus(6), recentCount = docs.filter(d => (d.date || '') >= since).length;
         const stat = (label, val, icon, color, go = '') => {
             const tag = go ? 'button' : 'div';
-            return `
-            <${tag} ${go ? `type="button" onclick="${go}"` : ''} class="card p-5 flex items-center justify-between text-right w-full ${go ? 'hover:shadow-md hover:border-apple-blue/40 transition cursor-pointer' : ''}">
-                <div><p class="text-xs font-semibold text-apple-gray">${label}</p><h3 class="text-2xl font-bold mt-1">${val}</h3></div>
-                <div class="w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-xl"><i class="fa-solid ${icon}"></i></div>
-            </${tag}>`;
+            return `<${tag} ${go ? `type="button" onclick="${go}"` : ''} class="card aspect-square p-1.5 flex flex-col items-center justify-center text-center min-w-0 ${go ? 'hover:shadow-md hover:border-apple-blue/40 active:scale-95 transition cursor-pointer' : ''}">
+                <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${color} flex items-center justify-center text-sm sm:text-base shrink-0"><i class="fa-solid ${icon}"></i></span>
+                <span class="text-lg sm:text-2xl font-bold leading-none mt-1.5">${val}</span>
+                <span class="text-[10px] sm:text-xs text-apple-gray leading-tight mt-0.5">${label}</span></${tag}>`;
         };
         $('app-content').innerHTML = `
         <div class="space-y-8 max-w-7xl mx-auto">
@@ -898,16 +932,11 @@
             </div>
 
             ${demoBanner()}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                ${stat('סך הכל מסמכים', docs.length, 'fa-file-lines', 'bg-blue-50 dark:bg-blue-900/20 text-apple-blue')}
+            <div class="grid grid-cols-4 gap-2 sm:gap-3 max-w-md">
+                ${stat('מסמכים', docs.length, 'fa-file-lines', 'bg-blue-50 dark:bg-blue-900/20 text-apple-blue')}
                 ${stat('קטגוריות', appData.categories.length, 'fa-folder-tree', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600')}
                 ${stat('מועדפים', docs.filter(d => d.isFavorite).length, 'fa-star', 'bg-amber-50 dark:bg-amber-900/20 text-amber-500', "switchView('favorites')")}
-            </div>
-
-            <div>
-                <h3 class="text-lg font-bold mb-3">נוספו לאחרונה</h3>
-                ${recent.length ? `<div class="card divide-y divide-apple-border/30 dark:divide-apple-darkBorder">${recent.map(d => renderDocRow(d, { showCat: true })).join('')}</div>`
-                    : `<div class="card p-8 text-center"><i class="fa-regular fa-folder-open text-3xl text-apple-gray mb-3"></i><p class="text-sm text-apple-gray mb-4">עדיין אין מסמכים. אפשר להתחיל בהעלאת המסמך הראשון.</p><button onclick="openAddDocModal()" class="btn-primary">הוסף מסמך</button></div>`}
+                ${stat('נוספו לאחרונה', recentCount, 'fa-clock', 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600', "switchView('recent')")}
             </div>
 
             <div>
@@ -1047,15 +1076,56 @@
         return docs.filter(d => !listState.tag || d.tags.includes(listState.tag));
     }
 
+    function topicInfo(cat) {
+        const cur = listState.folder, curFolder = cat.folders.find(f => f.id === cur) || null, curSub = getSub(cat, listState.sub);
+        const ctx = curFolder ? 'folder' : curSub ? 'sub' : 'cat';
+        const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
+        const it = (fn, icon, label, color, danger = false) => ({ fn, icon, label, color, danger });
+        if (ctx === 'folder') {
+            const ids = [curFolder.id, ...descendantFolderIds(cat, curFolder.id)];
+            return { ctx, curFolder, curSub, title: curFolder.name, desc: '',
+                subtitle: 'בתוך: ' + [cat.name, curSub && curSub.name, ...folderChain(cat, cur).slice(0, -1)].filter(Boolean).join(' › '),
+                icon: 'fa-folder', iconCls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-500', count: catDocs.filter(d => ids.includes(d.folderId)).length,
+                items: [it(`openEditFolderModal('${cat.id}','${curFolder.id}')`, 'fa-pen-to-square', 'עריכת תיקיה', '#007AFF'),
+                        it(`exportScope('folder','${curFolder.id}')`, 'fa-download', 'הורד תיקיה', '#34C759'),
+                        it(`deleteFolder('${cat.id}','${curFolder.id}')`, 'fa-trash', 'מחק תיקיה', '#FF3B30', true)] };
+        }
+        if (ctx === 'sub') return { ctx, curFolder, curSub, title: curSub.name, desc: '', subtitle: 'תת-קטגוריה בתוך: ' + cat.name,
+            icon: 'fa-layer-group', iconCls: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500', count: catDocs.filter(d => d.subId === curSub.id).length,
+            items: [it(`openEditSubModal('${cat.id}','${curSub.id}')`, 'fa-pen-to-square', 'עריכת תת-קטגוריה', '#007AFF'),
+                    it(`exportScope('sub','${curSub.id}')`, 'fa-download', 'הורד תת-קטגוריה', '#34C759'),
+                    it(`deleteSub('${cat.id}','${curSub.id}')`, 'fa-trash', 'מחק תת-קטגוריה', '#FF3B30', true)] };
+        return { ctx, curFolder, curSub, title: cat.name, desc: cat.description, subtitle: 'קטגוריה',
+            icon: safeIcon(cat.icon), iconCls: 'bg-apple-blue/10 text-apple-blue', count: catDocs.length,
+            items: [it(`openEditCategoryModal('${cat.id}')`, 'fa-pen-to-square', 'עריכת קטגוריה', '#007AFF'),
+                    it(`toggleCategoryStar('${cat.id}')`, 'fa-star', cat.isFavorite ? 'הסר כוכב' : 'סמן בכוכב', '#FF9500'),
+                    it(`openTagsModal('${cat.id}')`, 'fa-tags', 'תגיות', '#AF52DE'),
+                    it(`moveCategoryIntoCategory('${cat.id}')`, 'fa-folder-tree', 'העבר לתוך קטגוריה', '#5856D6'),
+                    it(`exportScope('cat','${cat.id}')`, 'fa-download', 'הורד קטגוריה', '#34C759'),
+                    it(`deleteCategory('${cat.id}')`, 'fa-trash', 'מחק קטגוריה', '#FF3B30', true)] };
+    }
+    function openPropsModal() {
+        const cat = getCat(activeCategoryId);
+        if (!cat) return;
+        const t = topicInfo(cat);
+        $('props-body').innerHTML = `
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-14 h-14 rounded-2xl ${t.iconCls} flex items-center justify-center text-2xl shrink-0"><i class="fa-solid ${t.icon}"></i></div>
+                <div class="min-w-0"><h4 class="text-lg font-bold break-words">${esc(t.title)}</h4><p class="text-xs text-apple-gray">${esc(t.subtitle)} · ${t.count} מסמכים</p></div>
+            </div>
+            ${t.desc ? `<p class="text-sm bg-white dark:bg-[#1C1C1E] rounded-xl p-3 mb-4 leading-relaxed break-words">${esc(t.desc)}</p>` : ''}
+            <div class="ios-group">${t.items.map(i => `<button onclick="closePropsModal();${i.fn}" class="ios-row ${i.danger ? '!text-red-600' : ''}"><span class="ios-ico" style="background:${i.color}"><i class="fa-solid ${i.icon}"></i></span><span class="flex-1">${i.label}</span><i class="fa-solid fa-chevron-left ios-chev"></i></button>`).join('')}</div>`;
+        $('props-modal').classList.remove('hidden');
+    }
+    function closePropsModal() { $('props-modal').classList.add('hidden'); }
+
     function renderCategoryDashboard(cat) {
         if (listState.sub && !getSub(cat, listState.sub)) listState.sub = '';
         if (listState.folder && !cat.folders.some(f => f.id === listState.folder)) listState.folder = '';
         { const cf = cat.folders.find(f => f.id === listState.folder); if (cf) listState.sub = cf.subId || ''; }
         if (listState.tag && !tagsOf(cat.id).includes(listState.tag)) listState.tag = '';
         const cur = listState.folder;
-        const curFolder = cat.folders.find(f => f.id === cur) || null;
-        const curSub = getSub(cat, listState.sub);
-        const ctx = curFolder ? 'folder' : curSub ? 'sub' : 'cat';
+        const info = topicInfo(cat), curFolder = info.curFolder, curSub = info.curSub;
         const manual = listState.sort === 'manual';
         const tilesMode = docViewMode === 'tiles';
         const catDocs = activeDocs().filter(d => d.categoryId === cat.id);
@@ -1065,46 +1135,28 @@
         let c = curFolder, guard = 0;
         while (c && guard++ < 50) { trail.unshift(c); c = cat.folders.find(f => f.id === c.parentId); }
         const sel = (v, val, l) => `<option value="${val}" ${v === val ? 'selected' : ''}>${l}</option>`;
+        $('header-title').textContent = info.title;
 
-        // ---- מאפייני הנושא הנוכחי (קטגוריה / תת-קטגוריה / תיקיה) ----
-        let hIcon, hIconCls, hTitle, hSubtitle, hCount;
-        if (ctx === 'folder') {
-            const ids = [curFolder.id, ...descendantFolderIds(cat, curFolder.id)];
-            hCount = catDocs.filter(d => ids.includes(d.folderId)).length;
-            hIcon = 'fa-folder'; hIconCls = 'bg-amber-50 dark:bg-amber-900/20 text-amber-500';
-            hTitle = curFolder.name;
-            hSubtitle = 'בתוך: ' + [cat.name, curSub && curSub.name, ...folderChain(cat, cur).slice(0, -1)].filter(Boolean).join(' › ');
-        } else if (ctx === 'sub') {
-            hCount = catDocs.filter(d => d.subId === curSub.id).length;
-            hIcon = 'fa-layer-group'; hIconCls = 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500';
-            hTitle = curSub.name; hSubtitle = 'תת-קטגוריה בתוך: ' + cat.name;
-        } else {
-            hCount = catDocs.length;
-            hIcon = safeIcon(cat.icon); hIconCls = 'bg-apple-blue/10 text-apple-blue';
-            hTitle = cat.name; hSubtitle = cat.description;
-        }
-        $('header-title').textContent = hTitle;
-        const menuBtn = (onclick, icon, label, cls = '') => `<button onclick="${onclick}" class="btn-soft ${cls}"><i class="fa-solid ${icon}"></i> ${label}</button>`;
-        let menu;
-        if (ctx === 'folder') menu = [
-            menuBtn(`openEditFolderModal('${cat.id}','${curFolder.id}')`, 'fa-pen-to-square', 'עריכת תיקיה'),
-            menuBtn(`downloadZip('folder','${curFolder.id}')`, 'fa-file-zipper', 'הורד תיקיה כקובץ ZIP'),
-            menuBtn(`deleteFolder('${cat.id}','${curFolder.id}')`, 'fa-trash', 'מחק תיקיה', '!text-red-600')];
-        else if (ctx === 'sub') menu = [
-            menuBtn(`openEditSubModal('${cat.id}','${curSub.id}')`, 'fa-pen-to-square', 'עריכת תת-קטגוריה'),
-            menuBtn(`downloadZip('sub','${curSub.id}')`, 'fa-file-zipper', 'הורד כקובץ ZIP'),
-            menuBtn(`deleteSub('${cat.id}','${curSub.id}')`, 'fa-trash', 'מחק תת-קטגוריה', '!text-red-600')];
-        else menu = [
-            menuBtn(`openEditCategoryModal('${cat.id}')`, 'fa-pen-to-square', 'עריכת קטגוריה'),
-            menuBtn(`toggleCategoryStar('${cat.id}')`, cat.isFavorite ? 'fa-star text-amber-500' : 'fa-star', cat.isFavorite ? 'הסר כוכב' : 'סמן בכוכב'),
-            menuBtn(`openTagsModal('${cat.id}')`, 'fa-tags', 'תגיות'),
-            menuBtn(`moveCategoryIntoCategory('${cat.id}')`, 'fa-folder-tree', 'העבר לתוך קטגוריה'),
-            menuBtn(`downloadZip('cat','${cat.id}')`, 'fa-file-zipper', 'הורד קטגוריה כקובץ ZIP'),
-            menuBtn(`deleteCategory('${cat.id}')`, 'fa-trash', 'מחק קטגוריה', '!text-red-600')];
+        // ---- ניווט (בולט וגדול) ----
+        const navBtn = 'shrink-0 w-10 h-10 rounded-xl bg-white dark:bg-apple-darkCard text-apple-blue flex items-center justify-center shadow-sm active:scale-95 transition';
+        const sep = '<i class="fa-solid fa-chevron-left text-[11px] text-apple-blue/50 shrink-0"></i>';
+        const pill = (label, onclick, on) => `<button onclick="${onclick}" class="shrink-0 px-4 py-2 rounded-xl text-[15px] font-bold whitespace-nowrap transition ${on ? 'bg-apple-blue text-white shadow-sm' : 'bg-white/80 dark:bg-apple-darkCard text-apple-blue'}">${label}</button>`;
+        const navBar = `<nav class="rounded-2xl bg-apple-blue/10 dark:bg-apple-blue/20 border border-apple-blue/25 p-2 flex items-center gap-2 overflow-x-auto no-scrollbar" aria-label="ניווט">
+            <button onclick="goBack()" class="${navBtn}" aria-label="חזור"><i class="fa-solid fa-chevron-right"></i></button>
+            <button onclick="switchView('main-dashboard')" class="${navBtn}" aria-label="לדאשבורד הראשי"><i class="fa-solid fa-house"></i></button>${sep}
+            ${pill(esc(cat.name), "setSubFilter('')", !cur && !curSub)}
+            ${curSub ? sep + pill(esc(curSub.name), `setSubFilter('${curSub.id}')`, !cur) : ''}
+            ${trail.map((f, i) => sep + pill(esc(f.name), `setFolderFilter('${f.id}')`, i === trail.length - 1)).join('')}</nav>`;
 
-        const crumbs = `<button onclick="setSubFilter('')" class="font-semibold hover:text-apple-blue ${(cur || curSub) ? '' : 'text-apple-blue'}">${esc(cat.name)}</button>` +
-            (curSub ? `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setSubFilter('${curSub.id}')" class="font-semibold hover:text-apple-blue ${cur ? '' : 'text-apple-blue'}">${esc(curSub.name)}</button>` : '') +
-            trail.map((f, i) => `<i class="fa-solid fa-chevron-left text-[9px] text-apple-gray mx-2"></i><button onclick="setFolderFilter('${f.id}')" class="font-semibold hover:text-apple-blue ${i === trail.length - 1 ? 'text-apple-blue' : ''}">${esc(f.name)}</button>`).join('');
+        // ---- שורת ריבועים: מאפייני הנושא + חדשים ----
+        const sq = (onclick, icon, cls, l1, l2, extra = '') => `<button type="button" onclick="${onclick}" class="card relative h-[84px] p-2 flex flex-col items-center justify-center text-center gap-1 min-w-0 hover:shadow-md active:scale-95 transition">${extra}
+            <span class="w-8 h-8 rounded-xl ${cls} flex items-center justify-center text-sm shrink-0"><i class="fa-solid ${icon}"></i></span>
+            <span class="text-[11px] font-bold leading-tight w-full truncate">${l1}</span><span class="text-[10px] text-apple-gray leading-none">${l2}</span></button>`;
+        const squares = `<div class="grid grid-cols-3 gap-2">
+            ${sq('openPropsModal()', info.icon, info.iconCls, esc(info.title), `${info.count} מסמכים`, '<i class="fa-solid fa-ellipsis absolute top-1.5 left-2 text-[11px] text-apple-gray"></i>')}
+            ${sq(`openAddSubModal('${cat.id}')`, 'fa-layer-group', 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500', 'תת-קטגוריה', 'חדשה +')}
+            ${sq(`openAddFolderModal('${cat.id}')`, 'fa-folder-plus', 'bg-amber-50 dark:bg-amber-900/20 text-amber-500', 'תיקיה', 'חדשה +')}</div>`;
+
         const subCard = x => {
             const dn = catDocs.filter(d => d.subId === x.id).length, fn = cat.folders.filter(f => f.subId === x.id).length;
             return `<div onclick="setSubFilter('${x.id}')" onkeydown="if(event.key==='Enter')setSubFilter('${x.id}')" tabindex="0" role="button" class="card p-4 flex items-center gap-3 hover:shadow-md transition cursor-pointer">
@@ -1112,16 +1164,16 @@
                 <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(x.name)}</p><span class="text-[11px] text-apple-gray">${dn} מסמכים${fn ? ` · ${fn} תיקיות` : ''}</span></div>
                 <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
                     ${manual ? orderBtns('moveSubOrder', x.id, true) : ''}
-                    <button onclick="downloadZip('sub','${x.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד כקובץ ZIP"><i class="fa-solid fa-file-zipper text-[10px]"></i></button>
+                    <button onclick="exportScope('sub','${x.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד"><i class="fa-solid fa-download text-[10px]"></i></button>
                     <button onclick="openEditSubModal('${cat.id}','${x.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תת-קטגוריה"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="deleteSub('${cat.id}','${x.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תת-קטגוריה"><i class="fa-solid fa-xmark text-xs"></i></button>
                 </div></div>`;
         };
         const showSubs = !cur && !listState.sub && (cat.subs || []).length > 0;
         const catTags = tagsSorted(cat.id);
-        const tagChips = catTags.length ? `<div class="flex flex-wrap items-center gap-2 px-1"><span class="text-xs font-semibold text-apple-gray"><i class="fa-solid fa-tags ml-1"></i>תגיות:</span>${catTags.map((t, i) => {
+        const tagChips = catTags.length ? `<div class="flex items-center gap-2 px-1 overflow-x-auto no-scrollbar"><span class="text-xs font-semibold text-apple-gray shrink-0"><i class="fa-solid fa-tags ml-1"></i>תגיות:</span>${catTags.map((t, i) => {
             const on = listState.tag === t, n = catDocs.filter(d => d.tags.includes(t)).length;
-            return `<button onclick="setTagFilter(${i})" aria-pressed="${on}" class="px-3 py-1 rounded-full text-xs font-medium border transition ${on ? 'bg-apple-blue text-white border-apple-blue' : 'border-apple-border/60 dark:border-apple-darkBorder hover:border-apple-blue'}">${esc(t)} <span class="opacity-70">${n}</span></button>`;
+            return `<button onclick="setTagFilter(${i})" aria-pressed="${on}" class="shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition ${on ? 'bg-apple-blue text-white border-apple-blue' : 'border-apple-border/60 dark:border-apple-darkBorder hover:border-apple-blue'}">${esc(t)} <span class="opacity-70">${n}</span></button>`;
         }).join('')}</div>` : '';
         const folderCard = f => {
             const ids = [f.id, ...descendantFolderIds(cat, f.id)];
@@ -1132,7 +1184,7 @@
                 <div class="min-w-0 flex-1"><p class="font-bold text-sm truncate">${esc(f.name)}</p><span class="text-[11px] text-apple-gray">${n} מסמכים${sc ? ` · ${sc} תיקיות משנה` : ''}</span></div>
                 <div class="flex items-center shrink-0" onclick="event.stopPropagation()">
                     ${manual ? orderBtns('moveFolderOrder', f.id, true) : ''}
-                    <button onclick="downloadZip('folder','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד תיקיה כקובץ ZIP"><i class="fa-solid fa-file-zipper text-[10px]"></i></button>
+                    <button onclick="exportScope('folder','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="הורד תיקיה"><i class="fa-solid fa-download text-[10px]"></i></button>
                     <button onclick="openEditFolderModal('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7" aria-label="עריכת תיקיה"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="deleteFolder('${cat.id}','${f.id}')" class="icon-btn !w-7 !h-7 hover:!text-red-600" aria-label="מחק תיקיה"><i class="fa-solid fa-xmark text-xs"></i></button>
                 </div>
@@ -1157,79 +1209,120 @@
                 <span class="text-[10px] text-apple-gray">${n} מסמכים</span>
                 ${manual ? `<div class="mt-1 flex" onclick="event.stopPropagation()">${orderBtns('moveSubOrder', x.id, true)}</div>` : ''}</div>`;
         };
-        const emptyCard = `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "העלה קבצים" כדי להתחיל.'}</div>`;
+        const emptyCard = `<div class="card p-8 text-center text-sm text-apple-gray"><i class="fa-regular fa-folder-open text-3xl mb-3 block"></i>${catDocs.length ? 'אין כאן מסמכים שמתאימים לתצוגה הנוכחית.' : 'אין מסמכים בקטגוריה הזו עדיין. לחץ על "+ מסמך חדש" למעלה כדי להתחיל.'}</div>`;
         let listBlock;
         if (tilesMode) {
             const tiles = [...(showSubs ? sortNamed(cat.subs).map(subTile) : []), ...subfolders.map(folderTile), ...docs.map(renderDocTile)];
             listBlock = tiles.length ? `<div class="card p-3"><div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">${tiles.join('')}</div></div>` : emptyCard;
         } else if (docs.length === 0) {
             listBlock = (subfolders.length || showSubs) && !listState.flat && !listState.tag
-                ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה, או לסמן "כל המסמכים".</p>` : emptyCard;
+                ? `<p class="text-xs text-apple-gray text-center py-2">אין מסמכים ישירות ${cur ? 'בתיקיה זו' : 'בשורש הקטגוריה'}. אפשר להיכנס לתיקיה, או לסמן "הכל".</p>` : emptyCard;
         } else listBlock = renderDocsTable(docs, cat);
 
+        const nsel = selectedDocIds.length;
         $('app-content').innerHTML = `
-        <div class="space-y-5 max-w-7xl mx-auto">
-            <div class="card p-5">
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div class="flex items-start gap-4 min-w-0">
-                        <div class="w-14 h-14 rounded-2xl ${hIconCls} flex items-center justify-center text-2xl shrink-0"><i class="fa-solid ${hIcon}"></i></div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h2 class="text-xl font-bold break-words">${esc(hTitle)}</h2>
-                                ${ctx === 'cat' && cat.isFavorite ? '<i class="fa-solid fa-star text-amber-500" title="קטגוריה מסומנת בכוכב"></i>' : ''}
-                                <span class="pill">${hCount} מסמכים</span>
-                            </div>
-                            ${hSubtitle ? `<p class="text-xs text-apple-gray mt-1">${esc(hSubtitle)}</p>` : ''}
-                            <button id="more-btn" onclick="toggleHeaderMore()" aria-expanded="${moreOpen}" class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-apple-blue hover:underline">עוד <i id="more-chevron" class="fa-solid fa-chevron-down text-[9px] transition-transform ${moreOpen ? 'rotate-180' : ''}"></i></button>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="openAddSubModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-layer-group"></i> תת-קטגוריה חדשה</button>
-                        <button onclick="openAddFolderModal('${cat.id}')" class="btn-soft"><i class="fa-solid fa-folder-plus"></i> תיקיה חדשה</button>
-                    </div>
-                </div>
-                <div id="header-more" class="${moreOpen ? '' : 'hidden'}"><div class="mt-4 pt-4 border-t border-apple-border/40 dark:border-apple-darkBorder flex flex-wrap gap-2">${menu.join('')}</div></div>
-            </div>
-
-            <div class="flex items-center flex-wrap text-sm px-1" aria-label="מיקום נוכחי">${crumbs}</div>
-
+        <div class="space-y-3 max-w-7xl mx-auto">
+            ${navBar}
+            ${squares}
             ${tagChips}
-
             ${showSubs && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${sortNamed(cat.subs).map(subCard).join('')}</div>` : ''}
-
             ${subfolders.length && !tilesMode ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${subfolders.map(folderCard).join('')}</div>` : ''}
 
-            <div class="card p-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="flex rounded-xl overflow-hidden border border-apple-border/60 dark:border-apple-darkBorder">
-                        <button onclick="setDocViewMode('list')" class="px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 ${docViewMode === 'list' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת רשימה"><i class="fa-solid fa-list"></i> רשימה</button>
-                        <button onclick="setDocViewMode('tiles')" class="px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 ${docViewMode === 'tiles' ? 'bg-apple-blue text-white' : 'text-apple-gray'}" aria-label="תצוגת ריבועים"><i class="fa-solid fa-table-cells-large"></i> ריבועים</button>
-                    </div>
-                    <select onchange="setSort(this.value)" class="inp !w-auto !py-2 !text-xs" aria-label="סדר התיקיות והמסמכים">
-                        ${sel(listState.sort, 'manual', 'סדר ידני (אני מסדר)')}${sel(listState.sort, 'name', 'שם (א-ת)')}${sel(listState.sort, 'name-desc', 'שם (ת-א)')}${sel(listState.sort, 'date-desc', 'תאריך (מהחדש לישן)')}${sel(listState.sort, 'date-asc', 'תאריך (מהישן לחדש)')}
-                    </select>
-                    <label class="flex items-center gap-2 text-xs font-medium cursor-pointer px-1"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="setFlat(this.checked)" class="rounded"> כל המסמכים, כולל מתוך תיקיות</label>
+            <div class="card p-2">
+                <div id="toolbar-controls" class="${nsel ? 'hidden' : 'flex'} items-center gap-2">
+                    <select onchange="setDocViewMode(this.value)" class="inp !w-auto !py-1.5 !px-2 !text-xs min-w-0" aria-label="תצוגת מסמכים">${sel(docViewMode, 'list', 'רשימה')}${sel(docViewMode, 'tiles', 'ריבועים')}</select>
+                    <select onchange="setSort(this.value)" class="inp !w-auto !py-1.5 !px-2 !text-xs min-w-0" aria-label="סדר התיקיות והמסמכים">${sel(listState.sort, 'manual', 'סדר ידני')}${sel(listState.sort, 'name', 'שם א-ת')}${sel(listState.sort, 'name-desc', 'שם ת-א')}${sel(listState.sort, 'date-desc', 'חדשים קודם')}${sel(listState.sort, 'date-asc', 'ישנים קודם')}</select>
+                    <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap px-1" title="הצג את כל המסמכים, כולל מתוך תיקיות"><input type="checkbox" ${listState.flat ? 'checked' : ''} onchange="setFlat(this.checked)" class="rounded"> הכל</label>
                 </div>
-                <div class="flex items-center gap-2 justify-between">
-                    <div id="bulk-actions-toolbar" class="${selectedDocIds.length ? 'flex' : 'hidden'} items-center gap-2 bg-apple-blue/10 p-1.5 rounded-xl border border-apple-blue/20">
-                        <span id="bulk-count-label" class="text-xs font-bold text-apple-blue px-2">${selectedDocIds.length} נבחרו</span>
-                        <button onclick="bulkFavorite()" class="p-1.5 bg-white dark:bg-apple-darkCard rounded-lg text-amber-500 text-xs px-2" aria-label="הוסף למועדפים"><i class="fa-solid fa-star"></i></button>
-                        <button onclick="bulkDelete()" class="p-1.5 bg-white dark:bg-apple-darkCard rounded-lg text-red-600 text-xs px-2" aria-label="העבר לסל מחזור"><i class="fa-solid fa-trash"></i></button>
-                        <button onclick="clearSelection()" class="p-1.5 text-apple-gray text-xs px-2" aria-label="בטל בחירה"><i class="fa-solid fa-xmark"></i></button>
+                <div id="bulk-actions-toolbar" class="${nsel ? 'flex' : 'hidden'} items-center justify-between gap-2 px-1">
+                    <span id="bulk-count-label" class="text-xs font-bold text-apple-blue">${nsel} נבחרו</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="bulkFavorite()" class="p-1.5 bg-apple-lightGray dark:bg-apple-darkBorder rounded-lg text-amber-500 text-xs px-2.5" aria-label="הוסף למועדפים"><i class="fa-solid fa-star"></i></button>
+                        <button onclick="bulkDelete()" class="p-1.5 bg-apple-lightGray dark:bg-apple-darkBorder rounded-lg text-red-600 text-xs px-2.5" aria-label="העבר לסל מחזור"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="clearSelection()" class="p-1.5 text-apple-gray text-xs px-2.5" aria-label="בטל בחירה"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <label class="btn-primary !text-xs cursor-pointer" title="בחר קבצים והם יישמרו מיד במקום שבו אתה נמצא"><i class="fa-solid fa-cloud-arrow-up text-[10px]"></i> העלה קבצים<input type="file" multiple class="hidden" onchange="quickUpload(event)"></label>
                 </div>
             </div>
-            ${manual ? '<p class="text-[11px] text-apple-gray px-1"><i class="fa-solid fa-arrows-up-down ml-1"></i>סדר ידני: השתמש בחצים כדי להזיז תיקיות ומסמכים. כדי למיין לפי שם או תאריך, בחר סדר אחר ברשימה.</p>' : ''}
+            ${manual ? '<p class="text-[11px] text-apple-gray px-1"><i class="fa-solid fa-arrows-up-down ml-1"></i>סדר ידני: השתמש בחצים להזזת תיקיות ומסמכים.</p>' : ''}
 
             ${listBlock}
         </div>`;
         syncSelectionUI();
     }
 
+    // ---- היסטוריית ניווט: חזרה אחורה בכפתור, בצעד "חזור" של המערכת ובהחלקה מימין לשמאל ----
+    let navStack = [], navRestoring = false;
+    const navSnap = () => ({ view: currentView, cat: activeCategoryId, sub: listState.sub, folder: listState.folder });
+    const navKey = x => [x.view, x.cat, x.sub, x.folder].join('|');
+    function trackNav(fn) {
+        const before = navSnap();
+        fn();
+        if (navRestoring || navKey(before) === navKey(navSnap())) return;
+        navStack.push(before);
+        if (navStack.length > 60) navStack.shift();
+        try { history.pushState({ docflow: 1 }, ''); } catch (e) {}
+    }
+    function switchView(v, c = null) { trackNav(() => _switchView(v, c)); }
+    function setSubFilter(id) { trackNav(() => _setSubFilter(id)); }
+    function setFolderFilter(id) { trackNav(() => _setFolderFilter(id)); }
+    function restoreNav(snap) {
+        navRestoring = true;
+        try {
+            currentView = snap.view; activeCategoryId = snap.cat || null;
+            listState.sub = snap.sub || ''; listState.folder = snap.folder || ''; listState.tag = '';
+            selectedDocIds = []; moreOpen = false; searchQuery = '';
+            $('global-search').value = ''; $('mobile-search').value = '';
+            closeSidebarIfMobile(); render(); $('app-content').scrollTop = 0;
+        } finally { navRestoring = false; }
+    }
+    function closeTopModal() {
+        if (confirmResolve) { confirmResolve(false); return true; }
+        if (moveResolve) { moveResolve(null); return true; }
+        for (const id of ['tags-modal', 'reorder-modal', 'props-modal', 'dl-modal', 'doc-modal', 'category-modal', 'folder-modal', 'sub-modal', 'doc-view-modal']) {
+            const m = $(id);
+            if (m && !m.classList.contains('hidden')) { m.classList.add('hidden'); return true; }
+        }
+        if (window.innerWidth < 1024 && !$('sidebar').classList.contains('translate-x-full')) { toggleSidebar(); return true; }
+        return false;
+    }
+    function goBack() {
+        if (closeTopModal()) return true;
+        if (navStack.length) {
+            const before = navPops;
+            try { history.back(); } catch (e) {}
+            setTimeout(() => { if (navPops === before && navStack.length) restoreNav(navStack.pop()); }, 250); // גיבוי: אם הדפדפן לא שלח popstate
+            return true;
+        }
+        if (currentView !== 'main-dashboard' || searchQuery || listState.sub || listState.folder) { restoreNav({ view: 'main-dashboard', cat: null, sub: '', folder: '' }); return true; }
+        return false;
+    }
+    let navPops = 0;
+    window.addEventListener('popstate', () => {
+        navPops++;
+        if (closeTopModal()) { try { history.pushState({ docflow: 1 }, ''); } catch (e) {} return; }
+        const snap = navStack.pop();
+        if (snap) restoreNav(snap);
+    });
+    (function () { // החלקה מימין לשמאל = חזרה אחורה
+        let sx = 0, sy = 0, st = 0, armed = false;
+        document.addEventListener('touchstart', e => {
+            if (e.touches.length !== 1) { armed = false; return; }
+            const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now();
+            armed = !(e.target && e.target.closest && e.target.closest('input,textarea,select,table,[data-no-swipe],.overflow-x-auto'));
+        }, { passive: true });
+        document.addEventListener('touchend', e => {
+            if (!armed) return;
+            armed = false;
+            const t = e.changedTouches && e.changedTouches[0];
+            if (!t) return;
+            const dx = t.clientX - sx, dy = t.clientY - sy;
+            if (dx <= -90 && Math.abs(dy) < 45 && Date.now() - st < 700) goBack();
+        }, { passive: true });
+    })();
+
     function setDocViewMode(m) { docViewMode = m; try { localStorage.setItem('docflow_view', m); } catch (e) {} render(); }
-    function setSubFilter(id) { moreOpen = false; listState.sub = id; listState.folder = ''; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
-    function setFolderFilter(id) {
+    function _setSubFilter(id) { moreOpen = false; listState.sub = id; listState.folder = ''; selectedDocIds = []; render(); $('app-content').scrollTop = 0; }
+    function _setFolderFilter(id) {
         moreOpen = false;
         listState.folder = id;
         if (id) { const c = getCat(activeCategoryId), f = c && c.folders.find(x => x.id === id); if (f) listState.sub = f.subId || ''; }
@@ -1357,6 +1450,7 @@
         if (master) { const list = currentListDocs(); master.checked = list.length > 0 && list.every(d => selectedDocIds.includes(d.id)); }
         const tb = $('bulk-actions-toolbar');
         if (!tb) return;
+        { const tc = $('toolbar-controls'); if (tc) { tc.classList.toggle('hidden', !!selectedDocIds.length); tc.classList.toggle('flex', !selectedDocIds.length); } }
         tb.classList.toggle('hidden', !selectedDocIds.length);
         tb.classList.toggle('flex', !!selectedDocIds.length);
         $('bulk-count-label').textContent = `${selectedDocIds.length} נבחרו`;
@@ -2147,18 +2241,6 @@
     // =====================================================================
     //  הגדרות בתפריט, "עוד" בכותרת, מיון וסדר ידני
     // =====================================================================
-    function toggleSettingsMenu() {
-        const m = $('settings-menu'), open = m.classList.toggle('hidden') === false;
-        $('settings-chevron').classList.toggle('rotate-180', open);
-        $('settings-btn').setAttribute('aria-expanded', String(open));
-    }
-    function toggleHeaderMore() {
-        const p = $('header-more');
-        if (!p) return;
-        moreOpen = p.classList.toggle('hidden') === false;
-        $('more-chevron').classList.toggle('rotate-180', moreOpen);
-        $('more-btn').setAttribute('aria-expanded', String(moreOpen));
-    }
     function setSort(v) {
         if (!SORTS.includes(v)) return;
         listState.sort = v;
@@ -2250,53 +2332,88 @@
         while (cur && g++ < 50) { names.unshift(cur.name); cur = cat.folders.find(f => f.id === cur.parentId); }
         return names;
     }
-    function zipScope(kind, id) {
+    const EXPORT_ROOT = 'dockflow';
+    const getDlTarget = () => { try { const v = localStorage.getItem('docflow_dl_target'); return ['phone', 'drive', 'both'].includes(v) ? v : 'phone'; } catch (e) { return 'phone'; } };
+    function docDirs(d) {
+        const cat = getCat(d.categoryId);
+        return [cat && cat.name, (getSub(cat, d.subId) || {}).name, ...(cat ? folderChain(cat, d.folderId) : [])].filter(Boolean).map(zipSafe);
+    }
+    function exportDocsFor(kind, id) {
+        if (kind === 'all') return { name: EXPORT_ROOT, docs: activeDocs() };
         const cat = kind === 'cat' ? getCat(id) : getCat(activeCategoryId);
         if (!cat) return null;
-        if (kind === 'cat') return { name: cat.name, docs: activeDocs().filter(d => d.categoryId === cat.id),
-            rel: d => [(getSub(cat, d.subId) || {}).name, ...folderChain(cat, d.folderId)].filter(Boolean) };
-        if (kind === 'sub') { const sb = getSub(cat, id); if (!sb) return null;
-            return { name: sb.name, docs: activeDocs().filter(d => d.categoryId === cat.id && d.subId === id), rel: d => folderChain(cat, d.folderId) }; }
+        const mine = activeDocs().filter(d => d.categoryId === cat.id);
+        if (kind === 'cat') return { name: cat.name, docs: mine };
+        if (kind === 'sub') { const sb = getSub(cat, id); return sb ? { name: sb.name, docs: mine.filter(d => d.subId === id) } : null; }
         const f = cat.folders.find(x => x.id === id);
         if (!f) return null;
-        const ids = [id, ...descendantFolderIds(cat, id)], base = folderChain(cat, id).length;
-        return { name: f.name, docs: activeDocs().filter(d => d.categoryId === cat.id && ids.includes(d.folderId)), rel: d => folderChain(cat, d.folderId).slice(base) };
+        const ids = [id, ...descendantFolderIds(cat, id)];
+        return { name: f.name, docs: mine.filter(d => ids.includes(d.folderId)) };
     }
-    let zipBusy = false;
-    async function downloadZip(kind, id) {
-        if (zipBusy) return toast('כבר מכין קובץ ZIP...');
-        const sc = zipScope(kind, id);
+    let exportBusy = false;
+    // הורדה / ייצוא לפי "הגדרות הורדה": לטלפון (ZIP עם תיקיית dockflow), לדרייב (תיקיות לפי נושאים), או שניהם
+    async function exportScope(kind, id) {
+        if (exportBusy) return toast('ייצוא כבר מתבצע...');
+        const sc = exportDocsFor(kind, id);
         if (!sc) return;
         const withFile = sc.docs.filter(d => d.fileKey);
-        if (!withFile.length) return toast('אין כאן מסמכים עם קבצים מצורפים להורדה.');
-        zipBusy = true;
+        if (!withFile.length) return toast('אין כאן מסמכים עם קבצים מצורפים לייצוא.');
+        const target = getDlTarget();
+        exportBusy = true;
         try {
             const entries = [], used = new Set();
             let missing = 0;
             for (let i = 0; i < withFile.length; i++) {
                 const d = withFile[i];
-                toast(`מכין קובץ ZIP... ${i + 1}/${withFile.length}`);
+                toast(`מכין קבצים... ${i + 1}/${withFile.length}`);
                 const blob = await getFileLazy(d.fileKey);
                 if (!blob) { missing++; continue; }
-                const dir = sc.rel(d).map(zipSafe).join('/') + (sc.rel(d).length ? '/' : '');
+                const dirs = docDirs(d), dir = dirs.length ? dirs.join('/') + '/' : '';
                 const fname = zipSafe(d.fileName || d.title), dot = fname.lastIndexOf('.');
                 const stem = dot > 0 ? fname.slice(0, dot) : fname, ext = dot > 0 ? fname.slice(dot) : '';
-                let path = dir + fname, k = 2;
-                while (used.has(path.toLowerCase())) path = `${dir}${stem} (${k++})${ext}`;
-                used.add(path.toLowerCase());
-                entries.push({ name: path, blob });
+                let name = fname, k = 2;
+                while (used.has((dir + name).toLowerCase())) name = `${stem} (${k++})${ext}`;
+                used.add((dir + name).toLowerCase());
+                entries.push({ dirs, name, blob, key: d.fileKey });
             }
             if (!entries.length) { toast(driveHint()); return; }
-            const zip = await buildZip(entries);
-            const url = URL.createObjectURL(zip);
-            const a = document.createElement('a');
-            a.href = url; a.download = zipSafe(sc.name) + '.zip';
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-            const noFile = sc.docs.length - withFile.length;
-            toast(`הורדו ${entries.length} קבצים בקובץ ZIP` + (missing ? `, ${missing} לא נמצאו` : '') + (noFile ? `, ${noFile} מסמכים בלי קובץ לא נכללו` : ''));
-        } catch (err) { console.error(err); toast('יצירת קובץ ה-ZIP נכשלה.'); }
-        finally { zipBusy = false; }
+            const notes = [];
+            if (target !== 'drive') {
+                const zip = await buildZip(entries.map(e => ({ name: [EXPORT_ROOT, ...e.dirs, e.name].join('/'), blob: e.blob })));
+                const url = URL.createObjectURL(zip);
+                const a = document.createElement('a');
+                a.href = url; a.download = kind === 'all' ? 'dockflow.zip' : `dockflow_${zipSafe(sc.name)}.zip`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                notes.push(`ירד ZIP עם ${entries.length} קבצים`);
+            }
+            if (target !== 'phone') {
+                try {
+                    if (!window.cloudExportFiles) throw Object.assign(new Error('no-cloud'), { code: 'drive-auth' });
+                    const r = await window.cloudExportFiles(entries, (n, t) => toast(`מעלה לדרייב ${n}/${t}...`));
+                    notes.push(`בדרייב: ${r.uploaded} הועלו` + (r.updated ? `, ${r.updated} עודכנו` : '') + (r.skipped ? `, ${r.skipped} כבר קיימים` : ''));
+                } catch (err) {
+                    console.error(err);
+                    notes.push(err && err.code === 'drive-auth' ? 'ההעלאה לדרייב דורשת התחברות לסנכרון וחיבור Google Drive (בתפריט הצדדי)' : 'ההעלאה לדרייב נכשלה');
+                }
+            }
+            toast(notes.join(' · ') + (missing ? ` · ${missing} קבצים לא נמצאו` : ''));
+        } catch (err) { console.error(err); toast('הייצוא נכשל.'); }
+        finally { exportBusy = false; }
+    }
+    function exportAll() { closeDlModal(); exportScope('all'); }
+    function openDownloadSettings() { closeSidebarIfMobile(); renderDlOptions(); $('dl-modal').classList.remove('hidden'); }
+    function closeDlModal() { $('dl-modal').classList.add('hidden'); }
+    function setDlTarget(v) { try { localStorage.setItem('docflow_dl_target', v); } catch (e) {} renderDlOptions(); }
+    function renderDlOptions() {
+        const cur = getDlTarget();
+        const opts = [['phone', 'fa-solid fa-mobile-screen', '#34C759', 'הורדה לטלפון', 'קובץ ZIP בשם dockflow'],
+                      ['drive', 'fa-brands fa-google-drive', '#FFCC00', 'העלאה לדרייב', 'תיקיות לפי הנושאים בדרייב'],
+                      ['both', 'fa-solid fa-arrows-split-up-and-left', '#007AFF', 'גם וגם', 'לטלפון ולדרייב']];
+        $('dl-options').innerHTML = opts.map(([v, ic, col, t, sub]) => `<button onclick="setDlTarget('${v}')" role="radio" aria-checked="${cur === v}" class="ios-row">
+            <span class="ios-ico" style="background:${col}"><i class="${ic}"></i></span>
+            <span class="flex-1"><span class="block">${t}</span><span class="block text-xs text-apple-gray">${sub}</span></span>
+            ${cur === v ? '<i class="fa-solid fa-check text-apple-blue"></i>' : ''}</button>`).join('');
     }
 
     // =====================================================================
@@ -2322,34 +2439,6 @@
         render();
     }
     // העלאה מהירה: בוחרים קבצים והם נשמרים מיד במקום שבו אתה נמצא (קטגוריה / תת-קטגוריה / תיקיה), בלי טופס
-    async function quickUpload(e) {
-        const files = [...(e.target.files || [])];
-        e.target.value = '';
-        const cat = getCat(activeCategoryId);
-        if (!files.length || !cat) return;
-        const fol = cat.folders.find(f => f.id === listState.folder) || null;
-        const sub = fol ? getSub(cat, fol.subId) : getSub(cat, listState.sub);
-        const where = fol ? fol.name : sub ? sub.name : cat.name;
-        let done = 0;
-        toast(`מעלה ${files.length} קבצים...`);
-        const results = await Promise.allSettled(files.map(async f => {
-            const doc = { id: uid('doc'), title: f.name.replace(/\.[^.]+$/, '') || f.name, categoryId: cat.id, subId: sub ? sub.id : '', folderId: fol ? fol.id : '',
-                tags: [], content: '', date: today(), size: '', fileName: '', fileKey: '', fileType: 'other', isFavorite: false, isDeleted: false, versions: [] };
-            await attachFile(doc, f);
-            done++; toast(`מעלה ${done}/${files.length}...`);
-            return doc;
-        }));
-        const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-        const failed = results.length - ok.length;
-        if (ok.length) { appData.documents.push(...ok); saveData(); render(); }
-        const undo = ok.length ? async () => {
-            for (const d of ok) await purgeDocFiles(d);
-            const ids = new Set(ok.map(d => d.id));
-            appData.documents = appData.documents.filter(d => !ids.has(d.id));
-            saveData(); render();
-        } : null;
-        toast(ok.length ? `${ok.length} מסמכים נוספו ל"${where}"` + (failed ? `, ${failed} נכשלו` : '') : 'שמירת הקבצים נכשלה. ייתכן שהאחסון בדפדפן מלא.', undo);
-    }
     function toggleFavoriteFromView() {
         const d = getDoc(activeDocId);
         if (!d) return;
@@ -2718,6 +2807,51 @@
                 console.error(e);
                 toast(e && e.code === 'auth/user-mismatch' ? 'בחרת חשבון גוגל אחר. בחר את החשבון שאיתו התחברת.' : 'החיבור ל-Google Drive נכשל.');
             }
+        };
+        // ---------- ייצוא מסודר ל-Drive: תיקיות לפי הנושאים, והקבצים בתוכן ----------
+        const qEsc = t => String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        async function exportChild(cache, parentId, name) {
+            const ck = (parentId || 'root') + '/' + name;
+            if (cache.has(ck)) return cache.get(ck);
+            let q, body = { name, mimeType: 'application/vnd.google-apps.folder' };
+            if (parentId) { q = "mimeType='application/vnd.google-apps.folder' and name='" + qEsc(name) + "' and '" + parentId + "' in parents and trashed=false"; body.parents = [parentId]; }
+            else { q = "appProperties has { key='docflowExportRoot' and value='1' } and trashed=false"; body.appProperties = { docflowExportRoot: '1' }; }
+            const r = await (await driveFetch(DRIVE_API + 'files?q=' + encodeURIComponent(q) + '&orderBy=createdTime&fields=files(id)&pageSize=1')).json();
+            let id = r.files && r.files[0] ? r.files[0].id : null;
+            if (!id) id = (await (await driveFetch(DRIVE_API + 'files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()).id;
+            cache.set(ck, id);
+            return id;
+        }
+        window.cloudExportFiles = async function (entries, onProgress) {
+            if (!user || !driveToken()) { const e = new Error('drive-not-connected'); e.code = 'drive-auth'; throw e; }
+            const cache = new Map();
+            let uploaded = 0, updated = 0, skipped = 0;
+            for (let i = 0; i < entries.length; i++) {
+                const e = entries[i];
+                let parent = await exportChild(cache, null, 'DocFlow - קבצים מסודרים');
+                for (const d of e.dirs) parent = await exportChild(cache, parent, d);
+                const q = "name='" + qEsc(e.name) + "' and '" + parent + "' in parents and trashed=false";
+                const found = await (await driveFetch(DRIVE_API + 'files?q=' + encodeURIComponent(q) + '&fields=files(id,appProperties)&pageSize=1')).json();
+                const ex = found.files && found.files[0];
+                const type = e.blob.type || 'application/octet-stream';
+                if (ex && ex.appProperties && ex.appProperties.dfk === e.key) skipped++;
+                else if (ex) {
+                    await driveFetch(DRIVE_UP + '/' + ex.id + '?uploadType=media', { method: 'PATCH', headers: { 'Content-Type': type }, body: e.blob });
+                    await driveFetch(DRIVE_API + 'files/' + ex.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appProperties: { dfk: e.key } }) });
+                    updated++;
+                } else {
+                    const init = await driveFetch(DRIVE_UP + '?uploadType=resumable&fields=id', { method: 'POST',
+                        headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type },
+                        body: JSON.stringify({ name: e.name, parents: [parent], mimeType: type, appProperties: { dfk: e.key } }) });
+                    const loc = init.headers.get('Location');
+                    if (!loc) throw new Error('drive-no-upload-url');
+                    const up = await fetch(loc, { method: 'PUT', headers: { 'Content-Type': type }, body: e.blob });
+                    if (!up.ok) throw new Error('Drive upload ' + up.status);
+                    uploaded++;
+                }
+                if (onProgress) onProgress(i + 1, entries.length);
+            }
+            return { uploaded, updated, skipped };
         };
         window.cloudDeleteFile = async function (key) {
             try {
